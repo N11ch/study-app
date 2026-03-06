@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'core/theme/app_theme.dart';
-import 'routes/app_routes.dart';
+import 'package:myapp/core/theme/app_theme.dart';
+import 'package:myapp/routes/app_routes.dart';
 
 /// Main application widget with theme support
 class StudyApp extends StatefulWidget {
@@ -21,9 +21,8 @@ class _StudyAppState extends State<StudyApp> {
 
   void _toggleTheme() {
     setState(() {
-      _themeMode = _themeMode == ThemeMode.light
-          ? ThemeMode.dark
-          : ThemeMode.light;
+      _themeMode =
+          _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
     });
   }
 
@@ -32,16 +31,16 @@ class _StudyAppState extends State<StudyApp> {
     return MaterialApp(
       title: 'Study App',
       debugShowCheckedModeBanner: false,
-      
+
       // Theme Configuration
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: _themeMode,
-      
-      // Routes
-      initialRoute: AppRoutes.splash,
+
+      initialRoute: AppRoutes.test,
+      // Routes are still needed for navigation from the dashboard
       onGenerateRoute: AppRoutes.generateRoute,
-      
+
       // Builder for global theme access
       builder: (context, child) {
         return MediaQuery(

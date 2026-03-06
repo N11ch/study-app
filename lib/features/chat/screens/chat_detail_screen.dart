@@ -124,7 +124,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         children: [
           AvatarWidget(
             name: widget.userName,
-            size: AvatarSize.small,
+            size: AvatarSize.small, radius: 20,
           ),
           const SizedBox(width: AppSizes.sm),
           Expanded(

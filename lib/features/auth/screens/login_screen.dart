@@ -174,13 +174,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     SocialAuthButton(
                       label: 'Continue with Google',
                       icon: Image.asset(AppAssets.googleIcon),
-                      onPressed: () {},
+                      onPressed: () {}, onApplePressed: () {  }, onGooglePressed: () {  }, googleButtonText: '', appleButtonText: '',
                     ),
                     const SizedBox(height: AppSizes.md),
                     SocialAuthButton(
                       label: 'Continue with Apple',
                       icon: Image.asset(AppAssets.appleIcon),
-                      onPressed: () {},
+                      onPressed: () {}, onApplePressed: () {  }, onGooglePressed: () {  }, googleButtonText: '', appleButtonText: '',
                     ),
                   ],
                 ),

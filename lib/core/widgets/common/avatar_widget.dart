@@ -15,6 +15,7 @@ class AvatarWidget extends StatelessWidget {
     this.borderColor,
     this.badge,
     this.badgeColor,
+    this.radius,
   });
 
   final String? imageUrl;
@@ -27,6 +28,7 @@ class AvatarWidget extends StatelessWidget {
   final Color? borderColor;
   final String? badge;
   final Color? badgeColor;
+  final int? radius;
 
   double get _avatarSize {
     switch (size) {
@@ -67,13 +69,12 @@ class AvatarWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
-    final effectiveBackgroundColor = backgroundColor ?? 
-        colorScheme.primaryContainer;
-    final effectiveTextColor = textColor ?? 
-        colorScheme.onPrimaryContainer;
-    final effectiveBorderColor = borderColor ?? 
-        colorScheme.primary.withOpacity(0.3);
+
+    final effectiveBackgroundColor =
+        backgroundColor ?? colorScheme.primaryContainer;
+    final effectiveTextColor = textColor ?? colorScheme.onPrimaryContainer;
+    final effectiveBorderColor =
+        borderColor ?? colorScheme.primary.withOpacity(0.3);
 
     Widget avatar = Container(
       width: _avatarSize,

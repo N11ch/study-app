@@ -8,7 +8,7 @@ class AppLogoWidget extends StatelessWidget {
   const AppLogoWidget({
     super.key,
     this.size = AppSizes.thumbnailSm,
-    this.heroTag,
+    this.heroTag, required int height,
   });
 
   final double size;

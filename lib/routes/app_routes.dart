@@ -12,13 +12,20 @@ import '../features/chat/screens/chat_detail_screen.dart';
 import '../features/subscription/screens/subscription_plans_screen.dart';
 import '../features/subscription/screens/payment_screen.dart';
 import '../features/subscription/screens/payment_success_screen.dart';
+import '../features/test/testWidget.dart';
 
 /// App routes configuration
 class AppRoutes {
   AppRoutes._();
 
+  //! for test unit change this into '/' if you done comment it bro
+  static const String test = '/test';
+
   // Route names
+  // remove the splash if you done the test dude
   static const String splash = '/';
+  //-------------------------------------------------
+
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String register = '/register';
@@ -35,6 +42,9 @@ class AppRoutes {
   /// Generate route based on settings
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case test:
+        return _buildRoute(const TestWidget() as Widget, settings);
+
       case splash:
         return _buildRoute(const SplashScreen(), settings);
 

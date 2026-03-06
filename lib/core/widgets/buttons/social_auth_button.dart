@@ -3,22 +3,34 @@ import 'package:flutter/material.dart';
 import '../../constants/app_sizes.dart';
 
 /// Social auth button used for Google / Apple sign-in.
-/// 
+///
 /// The [icon] parameter lets you pass any widget (e.g. SVG, image).
+/**
+   * Social auth button used for Google / Apple sign-in.
+   * the [icon] will be look like this
+   * ```
+   * icon: const Icon(Icons.apple),
+   * ```
+   */
 class SocialAuthButton extends StatelessWidget {
+  
   const SocialAuthButton({
     super.key,
     required this.label,
-    required this.icon,
+    this.icon,
     required this.onPressed,
     this.backgroundColor,
     this.borderColor,
     this.textColor,
     this.isLoading = false,
+    required Null Function() onApplePressed,
+    required Null Function() onGooglePressed,
+    required String googleButtonText,
+    required String appleButtonText,
   });
 
   final String label;
-  final Widget icon;
+  final Widget? icon;
   final VoidCallback onPressed;
   final Color? backgroundColor;
   final Color? borderColor;
@@ -30,12 +42,9 @@ class SocialAuthButton extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final effectiveBackgroundColor =
-        backgroundColor ?? colorScheme.surface;
-    final effectiveBorderColor =
-        borderColor ?? colorScheme.outline;
-    final effectiveTextColor =
-        textColor ?? colorScheme.onSurface;
+    final effectiveBackgroundColor = backgroundColor ?? colorScheme.surface;
+    final effectiveBorderColor = borderColor ?? colorScheme.outline;
+    final effectiveTextColor = textColor ?? colorScheme.onSurface;
 
     return SizedBox(
       width: double.infinity,
@@ -90,4 +99,3 @@ class SocialAuthButton extends StatelessWidget {
     );
   }
 }
-
