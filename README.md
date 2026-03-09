@@ -9,74 +9,73 @@
 * **Flexible Learning:** Students decide when, where, and how they learn—whether with a tutor or through self-paced study.
 * **Stand Out:** We aim to make every student confident enough to stand up in front of their class and shine.
 
-and don't be fucked with anything
 ---
 
-## 🚀 How to Contribute
-
-Welcome to the team! If this is your first time using GitHub or Flutter, don't worry. Follow these steps exactly, and you'll be coding in no time.
-
-### **Phase 1: Get the Code (One-time Setup)**
-
-**1. Fork the Repository**
-
-* Look at the top-right corner of this page.
-* Click the **Fork** button.
-* This creates a *copy* of this project into your own GitHub account. This is your safe space to break things without affecting the main project!
-
-**2. Clone Your Repository**
-
-* Open your terminal (or Command Prompt/Git Bash).
-* Run the command below (replace `YOUR-USERNAME` with your actual GitHub username):
-
-```bash
-# ⚠️ IMPORTANT: Clone YOUR fork, not the original hiyokun-d repo!
-git clone https://github.com/YOUR-USERNAME/study-app.git
-
-```
-
-**3. Open in VS Code (or Project IDX)**
-
-* Open VS Code.
-* Go to **File > Open Folder**.
-* Select the `study-app` folder you just downloaded.
+## 📖 Project Documentation
+For a detailed overview of the application's tech stack, core concepts, and features, please refer to the [docs.md](./docs.md) file.
 
 ---
 
-### **Phase 2: How to Run the Project**
+## 🚀 How to Setup and Run
 
+### **Phase 1: Frontend (Flutter)**
 Before you start coding, let's make sure the app actually runs on your machine.
 
-**1. Open the Terminal in VS Code**
-
-* Press `Ctrl + `` (backtick) to open the terminal inside VS Code.
-
-**2. Install Dependencies**
-
-* Flutter needs to download all the libraries we are using (like google_fonts, http, etc.). Run this command:
-
+**1. Install Dependencies**
 ```bash
 flutter pub get
-
 ```
 
-**3. Run the App**
-
-* Make sure you have a device connected (or an emulator running).
-* Check the bottom right of VS Code to see your connected device (e.g., "Chrome", "Pixel 5", "iPhone").
-* Run this command:
-
+**2. Run the App**
 ```bash
 flutter run
-
 ```
-
-* *Tip:* If you just want to see it quickly without a heavy emulator, choose **Chrome** or **Edge** as your device.
 
 ---
 
-### **Phase 3: Making Changes (The Workflow)**
+### **Phase 2: Backend (_server)**
+The backend is built with NestJS and Prisma. Follow these steps to get it running.
 
+**1. Navigate to the server directory**
+```bash
+cd _server
+```
+
+**2. Install Dependencies**
+```bash
+npm install
+```
+
+**3. Configure Environment Variables**
+* Copy the example environment file:
+  ```bash
+  cp .env.example .env
+  ```
+* Open `.env` and fill in your database credentials (e.g., from Supabase).
+
+**4. Generate Prisma Client**
+```bash
+npx prisma generate
+```
+
+**5. Run the Server**
+```bash
+# Development mode (with auto-reload)
+npm run start:dev
+
+# Production mode
+npm run start:prod
+```
+
+**6. Database Migrations (Optional)**
+If you make changes to the `prisma/schema.prisma` file, run:
+```bash
+npx prisma migrate dev
+```
+
+---
+
+## 🛠 Contributing Workflow
 **⚠️ NEVER work directly on the `main` branch!**
 Always create a "branch" for your specific task. Think of a branch as a "parallel universe" where you can make changes safely.
 
