@@ -8,7 +8,6 @@ import {
   Req,
   Request,
   UseGuards,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateProfileDTO } from './dto/update-profile.dto';
@@ -51,18 +50,7 @@ export class UserController {
     @Request() req: any,
     @Body() updateData: UpdateProfileDTO,
   ) {
-    console.log(req.user);
-
-    // Check multiple possible keys where the ID might be stored
-    const userId = req.user.userId || req.user.sub || req.user.id;
-
-    if (!userId) {
-      console.error('ERROR: Could not find user ID in req.user:', req.user);
-      throw new UnauthorizedException('Identification missing in token');
-    }
-
-    console.log('updated data: ', updateData);
-    console.log('get user Data: ', updateData.role);
+    const userId = req.user.sub;
     return this.userService.updateProfile(userId, updateData);
   }
 

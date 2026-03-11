@@ -70,7 +70,7 @@ model profiles {
   username                               String?
   avatar_url                             String?
   bio                                    String?
-  Roles                                  String?                @default("STUDENT")
+  role                                   String                 @default("STUDENT")
   book_price                             Decimal                @db.Decimal(10, 2)
   subjects                               String[]
   created_at                             DateTime?              @default(now()) @db.Timestamptz(6)
@@ -93,7 +93,7 @@ model profiles {
   tutor_availabilities                   tutor_availabilities[]
   tutor_offers                           tutor_offers[]
 
-  @@index([Roles], map: "idx_profiles_is_tutor")
+  @@index([role], map: "idx_profiles_is_tutor")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

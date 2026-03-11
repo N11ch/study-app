@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { UpdateProfileDTO } from './dto/update-profile.dto';
 
@@ -9,7 +13,7 @@ export class UserService {
   async getAllTutorProfile() {
     return this.prisma.profiles.findMany({
       where: {
-        Roles: 'TUTOR',
+        role: 'TUTOR',
       },
 
       select: {
@@ -30,7 +34,7 @@ export class UserService {
   async getAllStudentProfile() {
     return this.prisma.profiles.findMany({
       where: {
-        Roles: 'STUDENT',
+        role: 'STUDENT',
       },
 
       select: {
@@ -51,7 +55,7 @@ export class UserService {
   ) {
     return this.prisma.profiles.findMany({
       where: {
-        Roles: 'TUTOR',
+        role: 'TUTOR',
 
         // filter by search query
         ...(searchQuery && {
@@ -89,7 +93,7 @@ export class UserService {
     const tutor = await this.prisma.profiles.findFirst({
       where: {
         id: tutorID,
-        Roles: 'TUTOR',
+        role: 'TUTOR',
       },
 
       select: {
@@ -123,6 +127,10 @@ export class UserService {
   }
 
   async updateProfile(userId: string, data: UpdateProfileDTO) {
+    if (!userId) {
+      throw new BadRequestException('User ID is required');
+    }
+
     const user = await this.prisma.profiles.findUnique({
       where: { id: userId },
     });
@@ -131,12 +139,16 @@ export class UserService {
       throw new NotFoundException('User not found.');
     }
 
+    console.log('data in DTO ', data);
+
     const updateUserProfile = await this.prisma.profiles.update({
       where: { id: userId },
       data: {
         full_name: data.full_name,
         username: data.username,
         bio: data.bio,
+        avatar_url: data.avatar_url,
+        ...(data.role && { role: data.role.toUpperCase() }),
         updated_at: new Date(),
       },
 
@@ -146,9 +158,12 @@ export class UserService {
         full_name: true,
         username: true,
         bio: true,
-        Roles: true,
+        avatar_url: true,
+        role: true,
       },
     });
+
+    console.log('updated user data in database: ', updateUserProfile);
 
     return {
       message: 'Profile updated successfully!',
