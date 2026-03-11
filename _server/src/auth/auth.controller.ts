@@ -24,7 +24,6 @@ export class AuthController {
   // POST http://localhost:3000/auth/google
   @Post('google')
   async googleLogin(@Body() body: any) {
-    console.log('in google login user Role is: ', body.role);
     return this.authService.googleLogin(body.idToken, body.role);
   }
 }

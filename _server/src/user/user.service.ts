@@ -139,8 +139,6 @@ export class UserService {
       throw new NotFoundException('User not found.');
     }
 
-    console.log('data in DTO ', data);
-
     const updateUserProfile = await this.prisma.profiles.update({
       where: { id: userId },
       data: {
@@ -162,8 +160,6 @@ export class UserService {
         role: true,
       },
     });
-
-    console.log('updated user data in database: ', updateUserProfile);
 
     return {
       message: 'Profile updated successfully!',

@@ -51,8 +51,6 @@ export class UserController {
     @Request() req: any,
     @Body() updateData: UpdateProfileDTO,
   ) {
-    console.log(req.user);
-
     // Check multiple possible keys where the ID might be stored
     const userId = req.user.userId || req.user.sub || req.user.id;
 
@@ -61,8 +59,6 @@ export class UserController {
       throw new UnauthorizedException('Identification missing in token');
     }
 
-    console.log('updated data: ', updateData);
-    console.log('get user Data: ', updateData.role);
     return this.userService.updateProfile(userId, updateData);
   }
 
