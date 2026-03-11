@@ -87,6 +87,7 @@ class AppColors {
   // ===========================================
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [Color(0xFF1479FF), Colors.white],
+    stops: [0.0, 0.75],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );

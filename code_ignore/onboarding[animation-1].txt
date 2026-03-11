@@ -1,0 +1,888 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:myapp/core/constants/app_colors.dart';
+import '../../../core/constants/app_sizes.dart';
+import '../../../core/widgets/buttons/primary_button.dart';
+
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen>
+    with TickerProviderStateMixin {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  // ── Intro ──
+  late final AnimationController _introCtrl;
+  late final Animation<double> _introLogoScale;
+  late final Animation<double> _introLogoOpacity;
+  late final Animation<Offset> _introLogoSlide;
+  late final Animation<double> _introContentFade;
+  bool _introComplete = false;
+
+  // ── Per-page entrance ──
+  late final AnimationController _pageCtrl;
+  late final Animation<double> _iconScale;
+  late final Animation<double> _iconRotate;
+  late final Animation<Offset> _titleSlide;
+  late final Animation<double> _titleFade;
+  late final Animation<Offset> _subtitleSlide;
+  late final Animation<double> _subtitleFade;
+
+  // ── Button pop ──
+  late final AnimationController _btnCtrl;
+  late final Animation<double> _btnScale;
+
+  // ── Outro ──
+  late final AnimationController _outroCtrl;
+  late final Animation<double> _outroExpand;
+  late final Animation<double> _outroLogoOpacity;
+  late final Animation<double> _outroLogoScale;
+  bool _outroStarted = false;
+
+  // ── Particles ──
+  late final AnimationController _particleCtrl;
+  late final List<_Particle> _particles;
+
+  // ── Ripple ──
+  late final AnimationController _rippleCtrl;
+
+  final List<OnboardingPage> _pages = const [
+    OnboardingPage(
+        icon: Icons.school_rounded,
+        title: 'Lern',
+        subtitle:
+            'Your personalized learning companion. Connect with expert tutors and unlock your potential.',
+        style: TextStyle(
+            fontSize: 18, fontWeight: FontWeight.w300, color: Colors.white70)),
+    OnboardingPage(
+      icon: Icons.person_search_rounded,
+      title: 'Find a Tutor.',
+      subtitle:
+          'Search tutor based on specific topics and learn exactly what you need.',
+    ),
+    OnboardingPage(
+      icon: Icons.check_box_rounded,
+      title: 'Choose your tutor.',
+      subtitle:
+          'Browse Tutor profiles, experience, and reviews to find the best match for you',
+    ),
+    OnboardingPage(
+      icon: Icons.book,
+      title: 'Learn anything.',
+      subtitle: 'Keep learning no matter how hard it is',
+    )
+  ];
+
+  // ─────────── Init ───────────
+
+  @override
+  void initState() {
+    super.initState();
+    _setupParticles();
+    _setupIntro();
+    _setupPageAnim();
+    _setupButton();
+    _setupOutro();
+    _setupRipple();
+    _runIntro();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _introCtrl.dispose();
+    _pageCtrl.dispose();
+    _btnCtrl.dispose();
+    _outroCtrl.dispose();
+    _particleCtrl.dispose();
+    _rippleCtrl.dispose();
+    super.dispose();
+  }
+
+  void _setupParticles() {
+    final rng = Random(7);
+    _particles = List.generate(
+        10,
+        (i) => _Particle(
+              x: rng.nextDouble(),
+              y: rng.nextDouble(),
+              radius: 2.0 + rng.nextDouble() * 4.0,
+              speed: 0.025 + rng.nextDouble() * 0.04,
+              opacity: 0.06 + rng.nextDouble() * 0.12,
+              drift: (rng.nextDouble() - 0.5) * 0.4,
+              phase: rng.nextDouble() * 2 * pi,
+            ));
+    _particleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 12),
+    )..repeat();
+  }
+
+  void _setupIntro() {
+    _introCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+
+    // Safe: clamp scale so it never goes negative
+    _introLogoScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _introCtrl,
+        curve: const Interval(0.1, 0.7, curve: _NintendoBounce()),
+      ),
+    );
+
+    _introLogoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _introCtrl,
+        curve: const Interval(0.1, 0.38, curve: Curves.easeIn),
+      ),
+    );
+
+    _introLogoSlide = Tween<Offset>(
+      begin: const Offset(0.0, 0.28),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _introCtrl,
+      curve: const Interval(0.1, 0.65, curve: Curves.easeOutCubic),
+    ));
+
+    _introContentFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _introCtrl,
+        curve: const Interval(0.68, 1.0, curve: Curves.easeOut),
+      ),
+    );
+  }
+
+  void _setupPageAnim() {
+    _pageCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+
+    // Use custom curve instead of TweenSequence to avoid t-out-of-bounds
+    _iconScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _pageCtrl,
+        curve: const Interval(0.0, 0.75, curve: _NintendoBounce()),
+      ),
+    );
+
+    _iconRotate = Tween<double>(begin: -0.08, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _pageCtrl,
+        curve: const Interval(0.0, 0.65, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _titleSlide = Tween<Offset>(
+      begin: const Offset(0.0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _pageCtrl,
+      curve: const Interval(0.22, 0.72, curve: Curves.easeOutBack),
+    ));
+
+    _titleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _pageCtrl,
+        curve: const Interval(0.18, 0.58, curve: Curves.easeOut),
+      ),
+    );
+
+    _subtitleSlide = Tween<Offset>(
+      begin: const Offset(0.0, 0.4),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _pageCtrl,
+      curve: const Interval(0.38, 0.88, curve: Curves.easeOutCubic),
+    ));
+
+    _subtitleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _pageCtrl,
+        curve: const Interval(0.32, 0.72, curve: Curves.easeOut),
+      ),
+    );
+  }
+
+  void _setupButton() {
+    _btnCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 550),
+    );
+
+    _btnScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _btnCtrl,
+        curve: const _NintendoBounce(),
+      ),
+    );
+  }
+
+  void _setupOutro() {
+    _outroCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+
+    _outroExpand = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _outroCtrl,
+        curve: const Interval(0.05, 0.70, curve: Curves.easeInOut),
+      ),
+    );
+
+    _outroLogoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _outroCtrl,
+        curve: const Interval(0.52, 0.88, curve: Curves.easeOut),
+      ),
+    );
+
+    _outroLogoScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _outroCtrl,
+        curve: const Interval(0.50, 0.92, curve: _NintendoBounce()),
+      ),
+    );
+  }
+
+  void _setupRipple() {
+    _rippleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+  }
+
+  // ─────────── Sequence ───────────
+
+  Future<void> _runIntro() async {
+    await Future.delayed(const Duration(milliseconds: 120));
+    if (!mounted) return;
+    await _introCtrl.forward();
+    if (!mounted) return;
+    setState(() => _introComplete = true);
+    _runPageEntrance();
+  }
+
+  void _runPageEntrance() {
+    if (!mounted) return;
+    _pageCtrl.forward(from: 0.0);
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) _btnCtrl.forward(from: 0.0);
+    });
+  }
+
+  // ─────────── Actions ───────────
+
+  void _nextPage() {
+    HapticFeedback.lightImpact();
+    if (_currentPage < _pages.length - 1) {
+      _rippleCtrl.forward(from: 0.0);
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 380),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _runOutro();
+    }
+  }
+
+  void _skip() => _runOutro();
+
+  Future<void> _runOutro() async {
+    if (_outroStarted || !mounted) return;
+    setState(() => _outroStarted = true);
+    HapticFeedback.mediumImpact();
+    await _outroCtrl.forward();
+    if (!mounted) return;
+    HapticFeedback.heavyImpact();
+    Navigator.of(context).pushReplacementNamed('/register');
+  }
+
+  // ─────────── Build ───────────
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            _buildParticles(),
+            _buildRipple(),
+            SafeArea(
+              child: AnimatedBuilder(
+                animation: _introContentFade,
+                builder: (context, child) => Opacity(
+                  opacity: _introComplete
+                      ? 1.0
+                      : _introContentFade.value.clamp(0.0, 1.0),
+                  child: child,
+                ),
+                child: Column(
+                  children: [
+                    _buildTopNav(),
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _pageController,
+                        physics: const BouncingScrollPhysics(),
+                        onPageChanged: (index) {
+                          if (!mounted) return;
+                          setState(() => _currentPage = index);
+                          HapticFeedback.selectionClick();
+                          _runPageEntrance();
+                        },
+                        itemCount: _pages.length,
+                        itemBuilder: (context, index) {
+                          if (index == _currentPage) {
+                            return _buildAnimatedPage(
+                                _pages[index], theme, colorScheme);
+                          }
+                          return _buildStaticPage(
+                              _pages[index], theme, colorScheme);
+                        },
+                      ),
+                    ),
+                    _buildIndicators(colorScheme),
+                    _buildButton(),
+                  ],
+                ),
+              ),
+            ),
+            if (!_introComplete) _buildIntroOverlay(),
+            RepaintBoundary(child: _buildOutroOverlay()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopNav() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        AnimatedOpacity(
+          opacity: _currentPage > 0 ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 250),
+          child: TextButton(
+            onPressed: _currentPage > 0
+                ? () {
+                    HapticFeedback.lightImpact();
+                    _rippleCtrl.forward(from: 0.0);
+                    _pageController.previousPage(
+                      duration: const Duration(milliseconds: 380),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                : null,
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            child: const Text(
+              '< Back',
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ),
+        AnimatedOpacity(
+          opacity: _currentPage < _pages.length - 1 ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 250),
+          child: TextButton(
+            onPressed: _currentPage < _pages.length - 1 ? _skip : null,
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            child: const Text(
+              'Skip',
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIndicators(ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSizes.lg),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(_pages.length, (index) {
+          final isActive = _currentPage == index;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutBack,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            width: isActive ? 28 : 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: isActive
+                  ? colorScheme.primary
+                  : colorScheme.onSurface.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+              // No boxShadow blur here — avoids negative blur bug
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildButton() {
+    return Padding(
+      padding: const EdgeInsets.all(AppSizes.lg),
+      child: AnimatedBuilder(
+        animation: _btnCtrl,
+        builder: (context, child) => Transform.scale(
+          scale: _introComplete ? _btnScale.value.clamp(0.0, 1.2) : 1.0,
+          child: child,
+        ),
+        child: PrimaryButton(
+          text: _currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
+          onPressed: _nextPage,
+          width: 340,
+          height: 70,
+          radius: 90,
+          fontSize: 22,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
+  // ─────────── Page content ───────────
+
+  Widget _buildAnimatedPage(
+      OnboardingPage page, ThemeData theme, ColorScheme colorScheme) {
+    return AnimatedBuilder(
+      animation: _pageCtrl,
+      builder: (_, __) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSizes.xl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Transform.rotate(
+              angle: _iconRotate.value,
+              child: Transform.scale(
+                scale: _iconScale.value.clamp(0.0, 1.5),
+                child: _buildIconContainer(page),
+              ),
+            ),
+            const SizedBox(height: AppSizes.xxl),
+            Opacity(
+              opacity: _titleFade.value.clamp(0.0, 1.0),
+              child: SlideTransition(
+                position: _titleSlide,
+                child: GradientText(
+                  page.title,
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF1479FF),
+                      Color(0xFF147EFF),
+                      Color(0xFF149AFF)
+                    ],
+                    stops: [0.0, 0.28, 1.0],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  style: theme.textTheme.displaySmall
+                      ?.copyWith(fontWeight: FontWeight.w800, fontSize: 40),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSizes.md),
+            Opacity(
+              opacity: _subtitleFade.value.clamp(0.0, 1.0),
+              child: SlideTransition(
+                position: _subtitleSlide,
+                child: Text(
+                  page.subtitle,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    height: 1.6,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w100,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStaticPage(
+      OnboardingPage page, ThemeData theme, ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSizes.xl),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildIconContainer(page),
+          const SizedBox(height: AppSizes.xxl),
+          GradientText(
+            page.title,
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1479FF), Color(0xFF147EFF), Color(0xFF149AFF)],
+              stops: [0.0, 0.28, 1.0],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            style: theme.textTheme.displaySmall
+                ?.copyWith(fontWeight: FontWeight.w800, fontSize: 40),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSizes.md),
+          Text(
+            page.subtitle,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.6,
+              fontSize: 16,
+              fontWeight: FontWeight.w100,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIconContainer(OnboardingPage page) {
+    return Container(
+      width: 150,
+      height: 150,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [Color(0xFF1479FF), Color(0xFF14A5FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(7),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(page.icon, size: 90, color: Color(0xFF14A5FF)),
+        ),
+      ),
+    );
+  }
+
+  // ─────────── Overlays ───────────
+
+  Widget _buildIntroOverlay() {
+    return AnimatedBuilder(
+      animation: _introCtrl,
+      builder: (_, __) {
+        final overlayOpacity = (1.0 - _introContentFade.value).clamp(0.0, 1.0);
+        final logoOpacity = _introLogoOpacity.value.clamp(0.0, 1.0);
+        final combinedOpacity = (overlayOpacity * logoOpacity).clamp(0.0, 1.0);
+        if (combinedOpacity <= 0.0) return const SizedBox.shrink();
+        return Opacity(
+          opacity: combinedOpacity,
+          child: Center(
+            child: SlideTransition(
+              position: _introLogoSlide,
+              child: Transform.scale(
+                scale: _introLogoScale.value.clamp(0.0, 1.5),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 110,
+                      height: 110,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                      ),
+                      child: const Icon(
+                        Icons.school_rounded,
+                        size: 58,
+                        color: Color(0xFF1479FF),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    const Text(
+                      'Lern',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Your personalized learning companion',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.65),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOutroOverlay() {
+    return AnimatedBuilder(
+      animation: _outroCtrl,
+      builder: (_, __) {
+        if (_outroCtrl.value == 0.0) return const SizedBox.shrink();
+        final size = MediaQuery.of(context).size;
+        final maxRadius =
+            sqrt(size.width * size.width + size.height * size.height);
+        final radius = (_outroExpand.value.clamp(0.0, 1.0) * maxRadius);
+        final logoOpacity = _outroLogoOpacity.value.clamp(0.0, 1.0);
+        final logoScale = _outroLogoScale.value.clamp(0.0, 1.5);
+
+        return Stack(
+          children: [
+            CustomPaint(
+              painter: _CircleExpandPainter(radius: radius),
+              size: Size.infinite,
+            ),
+            if (logoOpacity > 0)
+              Center(
+                child: Opacity(
+                  opacity: logoOpacity,
+                  child: Transform.scale(
+                    scale: logoScale,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 90,
+                          height: 90,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF1479FF), Color(0xFF14A5FF)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.school_rounded,
+                            size: 48,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        const Text(
+                          'Lern',
+                          style: TextStyle(
+                            color: Color(0xFF1479FF),
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Get ready to unlock your potential',
+                          style: TextStyle(
+                            color: const Color(0xFF1479FF).withOpacity(0.55),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildParticles() {
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _particleCtrl,
+        builder: (_, __) => CustomPaint(
+          painter:
+              _ParticlePainter(particles: _particles, t: _particleCtrl.value),
+          size: Size.infinite,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRipple() {
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _rippleCtrl,
+        builder: (_, __) {
+          if (_rippleCtrl.value == 0.0) return const SizedBox.shrink();
+          final size = MediaQuery.of(context).size;
+          final scale = _rippleCtrl.value.clamp(0.0, 1.0);
+          final colorOpacity =
+              ((1.0 - _rippleCtrl.value) * 0.03).clamp(0.0, 1.0);
+          return Center(
+            child: Transform.scale(
+              scale: scale,
+              child: Container(
+                width: size.width * 2.2,
+                height: size.width * 2.2,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(colorOpacity),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ─────────── Nintendo Bounce Curve ───────────
+// Produces a satisfying overshoot-and-settle without TweenSequence t-bounds issues
+
+class _NintendoBounce extends Curve {
+  const _NintendoBounce();
+
+  @override
+  double transformInternal(double t) {
+    // Elastic-style: overshoot to 1.18, bounce back to 1.0
+    if (t < 0.6) {
+      return (t / 0.6) * 1.18;
+    } else if (t < 0.8) {
+      final p = (t - 0.6) / 0.2;
+      return 1.18 - p * 0.26; // 1.18 → 0.92
+    } else {
+      final p = (t - 0.8) / 0.2;
+      return 0.92 + p * 0.08; // 0.92 → 1.0
+    }
+  }
+}
+
+// ─────────── Painters ───────────
+
+class _CircleExpandPainter extends CustomPainter {
+  const _CircleExpandPainter({required this.radius});
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height / 2),
+      radius,
+      Paint()..color = Colors.white,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CircleExpandPainter old) => old.radius != radius;
+}
+
+class _ParticlePainter extends CustomPainter {
+  _ParticlePainter({required this.particles, required this.t});
+  final List<_Particle> particles;
+  final double t;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint();
+    for (final p in particles) {
+      final progress = (t * p.speed * 10) % 1.0;
+      final x = (p.x * size.width + sin(p.phase + t * 2 * pi) * 20 * p.drift)
+          .clamp(0.0, size.width);
+      final y = ((p.y - progress * 0.1) % 1.0) * size.height;
+      final opacity =
+          (p.opacity * (0.5 + 0.5 * sin(p.phase + progress * 2 * pi)))
+              .clamp(0.0, 1.0);
+
+      paint.color = Colors.white.withOpacity(opacity);
+      canvas.drawCircle(Offset(x, y), p.radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ParticlePainter old) => old.t != t;
+}
+
+// ─────────── Models ───────────
+
+class _Particle {
+  final double x, y, radius, speed, opacity, drift, phase;
+  const _Particle({
+    required this.x,
+    required this.y,
+    required this.radius,
+    required this.speed,
+    required this.opacity,
+    required this.drift,
+    required this.phase,
+  });
+}
+
+class OnboardingPage {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final TextStyle? style;
+
+  const OnboardingPage(
+      {required this.icon,
+      required this.title,
+      required this.subtitle,
+      this.style});
+}
+
+class GradientText extends StatelessWidget {
+  const GradientText(
+    this.text, {
+    super.key,
+    required this.gradient,
+    this.style,
+    this.textAlign,
+  });
+
+  final String text;
+  final TextStyle? style;
+  final Gradient gradient;
+  final TextAlign? textAlign;
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      blendMode: BlendMode.srcIn,
+      shaderCallback: (bounds) => gradient.createShader(
+        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+      ),
+      child: Text(text, style: style, textAlign: textAlign),
+    );
+  }
+}

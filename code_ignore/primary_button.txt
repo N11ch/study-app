@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_sizes.dart';
 
-/// Primary button widget with loading state and modern styling
 class PrimaryButton extends StatefulWidget {
   const PrimaryButton({
     super.key,
@@ -11,9 +10,7 @@ class PrimaryButton extends StatefulWidget {
     this.isEnabled = true,
     this.width,
     this.height,
-    this.radius,
-    this.fontSize,
-    this.fontWeight,
+    this.borderRadius,           // ← custom radius (optional)
     this.icon,
     this.iconPosition = IconPosition.left,
     this.backgroundColor,
@@ -28,9 +25,7 @@ class PrimaryButton extends StatefulWidget {
   final bool isEnabled;
   final double? width;
   final double? height;
-  final double? radius;
-  final double? fontSize;
-  final FontWeight? fontWeight;
+  final double? borderRadius;    // ← menggantikan radius
   final IconData? icon;
   final IconPosition iconPosition;
   final Color? backgroundColor;
@@ -77,8 +72,9 @@ class _PrimaryButtonState extends State<PrimaryButton>
     }
   }
 
+  // Gunakan borderRadius custom jika ada, fallback ke size-based
   double get _effectiveRadius {
-    if (widget.radius != null) return widget.radius!;
+    if (widget.borderRadius != null) return widget.borderRadius!;
     switch (widget.size) {
       case ButtonSize.small:
         return AppSizes.radiusSm;
@@ -225,24 +221,12 @@ class _PrimaryButtonState extends State<PrimaryButton>
       ),
     );
 
-    final radiusWidget = widget.radius != null
-        ? SizedBox(width: widget.radius)
-        : const SizedBox(width: AppSizes.sm);
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: widget.iconPosition == IconPosition.left
-          ? [
-              iconWidget,
-              const SizedBox(width: AppSizes.sm),
-              textWidget,
-            ]
-          : [
-              textWidget,
-              const SizedBox(width: AppSizes.sm),
-              iconWidget,
-            ],
+          ? [iconWidget, const SizedBox(width: AppSizes.sm), textWidget]
+          : [textWidget, const SizedBox(width: AppSizes.sm), iconWidget],
     );
   }
 }

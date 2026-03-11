@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 
 /// Central place for named text styles used in the app.
-/// 
+///
 /// These are thin aliases around the base Material [TextTheme]
 /// so you can refer to them semantically in UI code.
 class AppTypography {
@@ -13,7 +13,7 @@ class AppTypography {
       Theme.of(context).textTheme.displaySmall ??
       const TextStyle(
         fontSize: 24,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w800,
         color: AppColors.textPrimary,
       );
 
@@ -21,7 +21,7 @@ class AppTypography {
       Theme.of(context).textTheme.titleLarge ??
       const TextStyle(
         fontSize: 16,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w800,
         color: AppColors.textPrimary,
       );
 
@@ -44,4 +44,3 @@ class AppTypography {
         color: AppColors.primary,
       );
 }
-

@@ -16,16 +16,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  int _pageDirection = 1; // +1 = swiped forward (left→right), -1 = back
 
   late final AnimationController _pageCtrl;
-  // Icon: clean pop/zoom-in scale
-  late final Animation<double> _iconScale;
-  late final Animation<double> _iconFade;
-  // Title/Subtitle: horizontal slide progress (0→1), direction applied in build
-  late final Animation<double> _titleSlideT;
+  // Icon: separate X/Y for squash & stretch
+  late final Animation<double> _iconScaleY;
+  late final Animation<double> _iconScaleX;
+  late final Animation<double> _iconRotate;
+  // Title: slide up from bottom
+  late final Animation<Offset> _titleSlide;
   late final Animation<double> _titleFade;
-  late final Animation<double> _subtitleSlideT;
+  // Subtitle
+  late final Animation<Offset> _subtitleSlide;
   late final Animation<double> _subtitleFade;
 
   // NO _btnCtrl — button animates only on press via _NintendoPressButton
@@ -55,7 +56,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         icon: Icons.school_rounded,
         title: 'Lern',
         subtitle:
-            'Find expert tutors, book a session instantly, and pay only when you learn.'),
+            'Your personalized learning companion. Connect with expert tutors and unlock your potential.'),
     OnboardingPage(
       icon: Icons.person_search_rounded,
       title: 'Find a Tutor.',
@@ -121,40 +122,49 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       duration: const Duration(milliseconds: 750),
     );
 
-    // ── Icon: pop/zoom-in — scales from 0 to 1 with a slight overshoot, then settles ──
-    _iconScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+    // ── Icon: squash on land, stretch up, settle ──
+    // ScaleY: squash flat → spring tall → settle at 1.0
+    _iconScaleY = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
           parent: _pageCtrl,
-          curve: const Interval(0.0, 0.55, curve: _NintendoBounce())),
+          curve: const Interval(0.0, 0.80, curve: _SquashStretchY())),
     );
-    _iconFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+    // ScaleX: inverse — wide when short, narrow when tall
+    _iconScaleX = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
           parent: _pageCtrl,
-          curve: const Interval(0.0, 0.25, curve: Curves.easeOut)),
+          curve: const Interval(0.0, 0.80, curve: _SquashStretchX())),
+    );
+    _iconRotate = Tween<double>(begin: -0.10, end: 0.0).animate(
+      CurvedAnimation(
+          parent: _pageCtrl,
+          curve: const Interval(0.0, 0.65, curve: Curves.easeOutBack)),
     );
 
-    // ── Title: horizontal slide progress 0→1, direction applied in build ──
-    _titleSlideT = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-          parent: _pageCtrl,
-          curve: const Interval(0.10, 0.60, curve: Curves.easeOutCubic)),
-    );
+    // ── Title: slides up from bottom same as subtitle, slightly less delay ──
+    _titleSlide = Tween<Offset>(
+      begin: const Offset(0.0, 0.45),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+        parent: _pageCtrl,
+        curve: const Interval(0.18, 0.65, curve: Curves.easeOutCubic)));
     _titleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
           parent: _pageCtrl,
-          curve: const Interval(0.10, 0.38, curve: Curves.easeOut)),
+          curve: const Interval(0.16, 0.42, curve: Curves.easeOut)),
     );
 
-    // ── Subtitle: slightly delayed slide in same direction ──
-    _subtitleSlideT = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-          parent: _pageCtrl,
-          curve: const Interval(0.22, 0.72, curve: Curves.easeOutCubic)),
-    );
+    // ── Subtitle: fades + rises after title ──
+    _subtitleSlide = Tween<Offset>(
+      begin: const Offset(0.0, 0.4),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+        parent: _pageCtrl,
+        curve: const Interval(0.38, 0.82, curve: Curves.easeOutCubic)));
     _subtitleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
           parent: _pageCtrl,
-          curve: const Interval(0.22, 0.52, curve: Curves.easeOut)),
+          curve: const Interval(0.33, 0.65, curve: Curves.easeOut)),
     );
   }
 
@@ -289,11 +299,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       physics: const BouncingScrollPhysics(),
                       onPageChanged: (index) {
                         if (!mounted) return;
-                        final dir = index > _currentPage ? 1 : -1;
-                        setState(() {
-                          _pageDirection = dir;
-                          _currentPage = index;
-                        });
+                        setState(() => _currentPage = index);
                         HapticFeedback.selectionClick();
                         _runPageEntrance();
                       },
@@ -392,7 +398,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildButton() {
     String label;
     if (_currentPage == 0) {
-      label = 'Continue →';
+      label = 'Continue';
     } else if (_currentPage == _pages.length - 1) {
       label = 'Get Started';
     } else {
@@ -412,151 +418,53 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final index = _pages.indexOf(page);
     final isHero = index == 0;
 
-    if (isHero) {
-      return AnimatedBuilder(
-        animation: _pageCtrl,
-        builder: (_, __) {
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // ── Logo icon: pop/zoom-in ──
-              Opacity(
-                opacity: _iconFade.value.clamp(0.0, 1.0),
-                child: Transform.scale(
-                  scale: _iconScale.value.clamp(0.0, 1.3),
-                  child: const _LogoIconBox(),
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              // ── "Hi, Welcome to" label ──
-              Opacity(
-                opacity: _titleFade.value.clamp(0.0, 1.0),
-                child: Transform.translate(
-                  offset: Offset(
-                    (1.0 - _titleSlideT.value) * 80 * _pageDirection,
-                    0,
-                  ),
-                  child: Text(
-                    'Hi, Welcome to',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.85),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: 0.2,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 6),
-
-              // ── "Lern" big bold title — gradient blue ──
-              Opacity(
-                opacity: _titleFade.value.clamp(0.0, 1.0),
-                child: Transform.translate(
-                  offset: Offset(
-                    (1.0 - _titleSlideT.value) * 80 * _pageDirection,
-                    0,
-                  ),
-                  child: GradientText(
-                    'Lern',
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFF1479FF),
-                        Color(0xFF147EFF),
-                        Color(0xFF149AFF)
-                      ],
-                      stops: [0.0, 0.28, 1.0],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 80,
-                      letterSpacing: -3,
-                      height: 1.0,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // ── Subtitle — blue gradient tint ──
-              Opacity(
-                opacity: _subtitleFade.value.clamp(0.0, 1.0),
-                child: Transform.translate(
-                  offset: Offset(
-                    (1.0 - _subtitleSlideT.value) * 60 * _pageDirection,
-                    0,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Text(
-                      page.subtitle,
-                      style: const TextStyle(
-                        color: Color(0xFF1479FF),
-                        height: 1.6,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w300,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 3,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-    }
-
-    // ── Regular pages (1–3) ──
     return AnimatedBuilder(
       animation: _pageCtrl,
       builder: (_, __) {
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSizes.xl),
+          padding: EdgeInsets.symmetric(
+              horizontal: isHero ? AppSizes.lg : AppSizes.xl),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Opacity(
-                opacity: _iconFade.value.clamp(0.0, 1.0),
-                child: Transform.scale(
-                  scale: _iconScale.value.clamp(0.0, 1.3),
-                  child: _buildIconContainer(page, index),
+              // ── Visual: illustration or icon ──
+              Transform.rotate(
+                angle: _iconRotate.value,
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.diagonal3Values(
+                    _iconScaleX.value.clamp(0.0, 1.4),
+                    _iconScaleY.value.clamp(0.0, 1.4),
+                    1.0,
+                  ),
+                  child: _buildPageVisual(page, index),
                 ),
               ),
-              const SizedBox(height: AppSizes.xxl),
+
+              SizedBox(height: isHero ? AppSizes.lg : AppSizes.xxl),
+
+              // ── Title: slides up from bottom ──
               Opacity(
                 opacity: _titleFade.value.clamp(0.0, 1.0),
-                child: Transform.translate(
-                  offset: Offset(
-                    (1.0 - _titleSlideT.value) * 80 * _pageDirection,
-                    0,
-                  ),
+                child: SlideTransition(
+                  position: _titleSlide,
                   child: _buildTitleText(page, theme),
                 ),
               ),
+
               const SizedBox(height: AppSizes.md),
+
+              // ── Subtitle ──
               Opacity(
                 opacity: _subtitleFade.value.clamp(0.0, 1.0),
-                child: Transform.translate(
-                  offset: Offset(
-                    (1.0 - _subtitleSlideT.value) * 60 * _pageDirection,
-                    0,
-                  ),
+                child: SlideTransition(
+                  position: _subtitleSlide,
                   child: Text(
                     page.subtitle,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                       height: 1.6,
-                      fontSize: 16,
+                      fontSize: isHero ? 17 : 16,
                       fontWeight: FontWeight.w300,
                     ),
                     textAlign: TextAlign.center,
@@ -576,65 +484,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       OnboardingPage page, ThemeData theme, ColorScheme colorScheme) {
     final index = _pages.indexOf(page);
     final isHero = index == 0;
-
-    if (isHero) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const _LogoIconBox(),
-          const SizedBox(height: 40),
-          Text(
-            'Hi, Welcome to',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.85),
-              fontSize: 18,
-              fontWeight: FontWeight.w400,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          GradientText(
-            'Lern',
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1479FF), Color(0xFF147EFF), Color(0xFF149AFF)],
-              stops: [0.0, 0.28, 1.0],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-            style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 80,
-              letterSpacing: -3,
-              height: 1.0,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              page.subtitle,
-              style: const TextStyle(
-                color: Color(0xFF1479FF),
-                height: 1.6,
-                fontSize: 16,
-                fontWeight: FontWeight.w300,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-            ),
-          ),
-        ],
-      );
-    }
-
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSizes.xl),
+      padding:
+          EdgeInsets.symmetric(horizontal: isHero ? AppSizes.lg : AppSizes.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildIconContainer(page, index),
-          const SizedBox(height: AppSizes.xxl),
+          _buildPageVisual(page, index),
+          SizedBox(height: isHero ? AppSizes.lg : AppSizes.xxl),
           _buildTitleText(page, theme),
           const SizedBox(height: AppSizes.md),
           Text(
@@ -642,7 +499,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             style: theme.textTheme.bodyLarge?.copyWith(
               color: colorScheme.onSurfaceVariant,
               height: 1.6,
-              fontSize: 16,
+              fontSize: isHero ? 17 : 16,
               fontWeight: FontWeight.w300,
             ),
             textAlign: TextAlign.center,
@@ -652,6 +509,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ],
       ),
     );
+  }
+
+  // Returns the right visual for each page — SVG illustration for p0, styled icon for rest
+  Widget _buildPageVisual(OnboardingPage page, int index) {
+    if (index == 0) return const _HeroIllustration();
+    return _buildIconContainer(page, index);
   }
 
   // Title: page 0 gets huge extrabold, rest get standard 40sp w800
@@ -698,11 +561,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       _IconConfig(
           Icons.school_rounded, const [Color(0xFF1479FF), Color(0xFF14A5FF)]),
       _IconConfig(Icons.person_search_rounded,
-          const [Color(0xFF1479FF), Color(0xFF14A5FF)]),
+          const [Color(0xFF6C63FF), Color(0xFF9B8FFF)]),
       _IconConfig(
-          Icons.verified_rounded, const [Color(0xFF1479FF), Color(0xFF14A5FF)]),
+          Icons.verified_rounded, const [Color(0xFF0BA84A), Color(0xFF34D399)]),
       _IconConfig(Icons.auto_stories_rounded,
-          const [Color(0xFF1479FF), Color(0xFF14A5FF)]),
+          const [Color(0xFFE85D04), Color(0xFFFB923C)]),
     ];
     final cfg = configs[index.clamp(0, configs.length - 1)];
 
@@ -786,7 +649,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       opacity: logoOp,
                       child: Transform.scale(
                         scale: logoSc,
-                        child: const _LogoIconBox(),
+                        child: Container(
+                          width: 88,
+                          height: 88,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF1479FF), Color(0xFF14A5FF)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: const Icon(Icons.school_rounded,
+                              size: 46, color: Colors.white),
+                        ),
                       ),
                     ),
 
@@ -1042,6 +918,33 @@ class _NintendoBounce extends Curve {
   }
 }
 
+/// Icon scaleY: squash down → spring tall → settle
+/// Simulates hitting the ground and bouncing straight up
+class _SquashStretchY extends Curve {
+  const _SquashStretchY();
+  @override
+  double transformInternal(double t) {
+    if (t < 0.12) return (t / 0.12) * 0.65; // slam flat fast
+    if (t < 0.38) return 0.65 + (t - 0.12) / 0.26 * 0.68; // spring tall → 1.33
+    if (t < 0.58) return 1.33 - (t - 0.38) / 0.20 * 0.25; // → 1.08
+    if (t < 0.76) return 1.08 - (t - 0.58) / 0.18 * 0.12; // → 0.96
+    return 0.96 + (t - 0.76) / 0.24 * 0.04; // settle → 1.0
+  }
+}
+
+/// Icon scaleX: inverse of Y (conservation of volume feel)
+class _SquashStretchX extends Curve {
+  const _SquashStretchX();
+  @override
+  double transformInternal(double t) {
+    if (t < 0.12) return (t / 0.12) * 1.32; // slam wide fast
+    if (t < 0.38) return 1.32 - (t - 0.12) / 0.26 * 0.48; // → 0.84
+    if (t < 0.58) return 0.84 + (t - 0.38) / 0.20 * 0.14; // → 0.98
+    if (t < 0.76) return 0.98 + (t - 0.58) / 0.18 * 0.05; // → 1.03
+    return 1.03 - (t - 0.76) / 0.24 * 0.03; // settle → 1.0
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // Painters
 // ─────────────────────────────────────────────────────────────
@@ -1084,132 +987,213 @@ class _ParticlePainter extends CustomPainter {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Lern Logo — page 0 hero, pixel-traced from logo PNG
-// White cursive "L" with cyan 3D offset shadow
+// Hero Illustration — page 0 SVG-style art drawn with Canvas
 // ─────────────────────────────────────────────────────────────
 
-/// 90×90 blue rounded-rectangle logo box — matches the design screenshot exactly.
-/// The Lern "L" logo painter sits inside a blue rounded square (radius 16).
-class _LogoIconBox extends StatelessWidget {
-  const _LogoIconBox();
+class _HeroIllustration extends StatelessWidget {
+  const _HeroIllustration();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 90,
-      height: 90,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1479FF),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1479FF).withOpacity(0.40),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: CustomPaint(painter: _LernLogoPainter()),
-      ),
+    return SizedBox(
+      width: 280,
+      height: 220,
+      child: CustomPaint(painter: _HeroIllustrationPainter()),
     );
   }
 }
 
-/// Draws the Lern "L" lettermark exactly as in lern-logo.png:
-/// - Chunky cursive "L" with rounded cap at top
-/// - Vertical stem + horizontal bar at bottom
-/// - Open "U" tail at base (two legs curving down)
-/// - Cyan (#1AE8FF) offset shadow ~16px left, 14px down
-/// - White letterform on top
-class _LernLogoPainter extends CustomPainter {
+class _HeroIllustrationPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    // Original artboard: 480×480
-    final double sx = size.width / 480;
-    final double sy = size.height / 480;
+    final w = size.width;
+    final h = size.height;
+    final paint = Paint()..isAntiAlias = true;
 
-    // Scale helper
-    Path buildL(double offX, double offY) {
-      // All coords in original 480px space
-      double x(double v) => (v + offX) * sx;
-      double y(double v) => (v + offY) * sy;
+    // ── Desk platform ──
+    paint
+      ..color = const Color(0xFFE8F0FE)
+      ..style = PaintingStyle.fill;
+    final deskRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.05, h * 0.72, w * 0.90, h * 0.14),
+      const Radius.circular(16),
+    );
+    canvas.drawRRect(deskRect, paint);
 
-      final path = Path();
+    // desk top edge highlight
+    paint.color = const Color(0xFFBDD0FC);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w * 0.05, h * 0.72, w * 0.90, h * 0.025),
+        const Radius.circular(16),
+      ),
+      paint,
+    );
 
-      // ── Top of cap — crown curves left then right ──
-      path.moveTo(x(190), y(80));
-      path.cubicTo(x(218), y(76), x(252), y(86), x(252), y(115));
+    // ── Laptop body ──
+    paint.color = const Color(0xFF1479FF);
+    final laptopBase = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.22, h * 0.60, w * 0.56, h * 0.13),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(laptopBase, paint);
 
-      // ── Right side of cap into stem (right edge) ──
-      path.cubicTo(x(252), y(138), x(252), y(150), x(252), y(158));
+    // laptop hinge notch
+    paint.color = const Color(0xFF0D5FCC);
+    canvas.drawRect(
+      Rect.fromLTWH(w * 0.44, h * 0.60, w * 0.12, h * 0.025),
+      paint,
+    );
 
-      // ── Right edge of stem, very slight taper going down ──
-      path.lineTo(x(241), y(240));
-      path.lineTo(x(236), y(282));
+    // laptop screen outer
+    paint.color = const Color(0xFF1479FF);
+    final screenOuter = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.25, h * 0.22, w * 0.50, h * 0.39),
+      const Radius.circular(10),
+    );
+    canvas.drawRRect(screenOuter, paint);
 
-      // ── Stem right side continues, right arm starts to emerge ──
-      path.cubicTo(x(234), y(300), x(232), y(312), x(230), y(318));
+    // screen glass
+    paint.color = const Color(0xFFEEF4FF);
+    final screen = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.28, h * 0.25, w * 0.44, h * 0.33),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(screen, paint);
 
-      // ── Merge point — full horizontal bar begins ──
-      // Transition: stem joins bar, bar extends right to ~357
-      path.cubicTo(x(235), y(322), x(280), y(322), x(357), y(322));
-
-      // ── Bottom-right corner of horizontal bar ──
-      path.cubicTo(x(360), y(322), x(360), y(326), x(357), y(358));
-
-      // ── Right leg of U tail — curves outward and down ──
-      path.cubicTo(x(356), y(363), x(348), y(368), x(308), y(395));
-      path.cubicTo(x(298), y(401), x(285), y(401), x(268), y(395));
-
-      // ── U notch — inward curve between the two legs ──
-      path.cubicTo(x(248), y(387), x(237), y(374), x(226), y(364));
-
-      // ── Left leg inner edge — comes up slightly then turns ──
-      path.cubicTo(x(216), y(354), x(208), y(352), x(207), y(369));
-
-      // ── Left leg curves down and outward ──
-      path.cubicTo(x(203), y(381), x(188), y(392), x(162), y(395));
-      path.cubicTo(x(146), y(396), x(130), y(387), x(131), y(358));
-
-      // ── Bottom of bar, left side going back left ──
-      path.lineTo(x(131), y(322));
-
-      // ── Left side of stem going back up ──
-      path.lineTo(x(165), y(312));
-      path.lineTo(x(165), y(158));
-
-      // ── Top-left of cap: curves back up to start ──
-      path.cubicTo(x(165), y(140), x(152), y(122), x(128), y(112));
-      path.cubicTo(x(118), y(100), x(130), y(78), x(165), y(78));
-      path.cubicTo(x(178), y(77), x(186), y(78), x(190), y(80));
-
-      path.close();
-      return path;
+    // ── Screen content lines (simulated UI) ──
+    paint.color = const Color(0xFF1479FF).withOpacity(0.25);
+    for (int i = 0; i < 4; i++) {
+      final lineW = i == 0 ? w * 0.28 : w * 0.18 + (i * w * 0.03);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(w * 0.315, h * 0.305 + i * h * 0.065, lineW, h * 0.022),
+          const Radius.circular(4),
+        ),
+        paint,
+      );
     }
 
-    // Pass 1: cyan shadow (offset left/up as 3D depth effect)
-    canvas.drawPath(
-      buildL(-16, 14),
-      Paint()
-        ..color = const Color(0xFF1AE8FF)
-        ..style = PaintingStyle.fill
-        ..isAntiAlias = true,
+    // screen avatar circle
+    paint.color = const Color(0xFF1479FF).withOpacity(0.35);
+    canvas.drawCircle(
+      Offset(w * 0.355, h * 0.315),
+      h * 0.028,
+      paint,
     );
 
-    // Pass 2: white letter on top
-    canvas.drawPath(
-      buildL(0, 0),
-      Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.fill
-        ..isAntiAlias = true,
+    // ── Floating book card (left) ──
+    paint
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    final shadow = Paint()
+      ..color = const Color(0xFF1479FF).withOpacity(0.12)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w * 0.01, h * 0.33, w * 0.18, h * 0.22),
+        const Radius.circular(12),
+      ),
+      shadow,
     );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w * 0.02, h * 0.32, w * 0.18, h * 0.22),
+        const Radius.circular(12),
+      ),
+      paint,
+    );
+    // book spine
+    paint.color = const Color(0xFF1479FF);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w * 0.02, h * 0.32, w * 0.035, h * 0.22),
+        const Radius.circular(12),
+      ),
+      paint,
+    );
+    // book lines
+    paint.color = const Color(0xFFBDD0FC);
+    for (int i = 0; i < 3; i++) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+              w * 0.07, h * 0.37 + i * h * 0.055, w * 0.10, h * 0.018),
+          const Radius.circular(3),
+        ),
+        paint,
+      );
+    }
+
+    // ── Floating star badge (right) ──
+    paint.color = Colors.white;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w * 0.80, h * 0.28, w * 0.18, h * 0.18),
+        const Radius.circular(12),
+      ),
+      shadow,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w * 0.80, h * 0.27, w * 0.18, h * 0.18),
+        const Radius.circular(12),
+      ),
+      paint,
+    );
+    // star
+    _drawStar(
+        canvas, Offset(w * 0.89, h * 0.36), h * 0.042, const Color(0xFFFFB800));
+
+    // ── Floating chat bubble (top center) ──
+    paint.color = const Color(0xFF1479FF);
+    final bubble = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.36, h * 0.04, w * 0.28, h * 0.12),
+      const Radius.circular(14),
+    );
+    canvas.drawRRect(bubble, paint);
+    // bubble tail
+    final tailPath = Path()
+      ..moveTo(w * 0.44, h * 0.155)
+      ..lineTo(w * 0.41, h * 0.19)
+      ..lineTo(w * 0.49, h * 0.155)
+      ..close();
+    canvas.drawPath(tailPath, paint);
+    // bubble dots
+    paint.color = Colors.white;
+    for (int i = 0; i < 3; i++) {
+      canvas.drawCircle(
+        Offset(w * 0.44 + i * w * 0.07, h * 0.10),
+        h * 0.016,
+        paint,
+      );
+    }
+  }
+
+  void _drawStar(Canvas canvas, Offset center, double radius, Color color) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+    final path = Path();
+    const points = 5;
+    final innerRadius = radius * 0.42;
+    for (int i = 0; i < points * 2; i++) {
+      final angle = (i * pi / points) - pi / 2;
+      final r = i.isEven ? radius : innerRadius;
+      final x = center.dx + cos(angle) * r;
+      final y = center.dy + sin(angle) * r;
+      if (i == 0)
+        path.moveTo(x, y);
+      else
+        path.lineTo(x, y);
+    }
+    path.close();
+    canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(_LernLogoPainter _) => false;
+  bool shouldRepaint(_HeroIllustrationPainter _) => false;
 }
 
 // ─────────────────────────────────────────────────────────────
