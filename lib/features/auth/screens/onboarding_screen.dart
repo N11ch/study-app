@@ -1,18 +1,10 @@
-<<<<<<< HEAD
-import 'package:flutter/material.dart';
-=======
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
->>>>>>> 6586c5f (Add core models and test widget for UI components)
 import 'package:myapp/core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 
-<<<<<<< HEAD
-/// Modern onboarding screen with page indicators
-=======
->>>>>>> 6586c5f (Add core models and test widget for UI components)
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -20,37 +12,17 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-<<<<<<< HEAD
-class _OnboardingScreenState extends State<OnboardingScreen> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
-
-  final List<OnboardingPage> _pages = [
-    const OnboardingPage(
-        icon: Icons.person_search_rounded,
-        title: 'Find a Tutor.',
-        subtitle:
-            'Search tutor based on specific topics and learn exactly what you need.'),
-    const OnboardingPage(
-      icon: Icons.check_box_rounded,
-      title: 'Choose your tutor',
-      subtitle:
-          'Browse Tutor profiles, experience, and reviews to find the best match for you',
-    ),
-    const OnboardingPage(
-      icon: Icons.book,
-      title: 'Learn anything',
-=======
 class _OnboardingScreenState extends State<OnboardingScreen>
     with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  int _pageDirection = 1;
+  int _pageDirection = 1; // +1 = swiped forward (left→right), -1 = back
 
   late final AnimationController _pageCtrl;
-  // Icon/Title/Subtitle: slide horizontally based on page direction
-  late final Animation<double> _iconSlideT;
+  // Icon: clean pop/zoom-in scale
+  late final Animation<double> _iconScale;
   late final Animation<double> _iconFade;
+  // Title/Subtitle: horizontal slide progress (0→1), direction applied in build
   late final Animation<double> _titleSlideT;
   late final Animation<double> _titleFade;
   late final Animation<double> _subtitleSlideT;
@@ -80,11 +52,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   final List<OnboardingPage> _pages = const [
     OnboardingPage(
-      icon: Icons.school_rounded,
-      title: 'Lern',
-      subtitle:
-          'Your personalized learning companion. Connect with expert tutors and unlock your potential.',
-    ),
+        icon: Icons.school_rounded,
+        title: 'Lern',
+        subtitle:
+            'Find expert tutors, book a session instantly, and pay only when you learn.'),
     OnboardingPage(
       icon: Icons.person_search_rounded,
       title: 'Find a Tutor.',
@@ -100,37 +71,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     OnboardingPage(
       icon: Icons.book,
       title: 'Learn anything.',
->>>>>>> 6586c5f (Add core models and test widget for UI components)
       subtitle: 'Keep learning no matter how hard it is',
     ),
   ];
 
   @override
-<<<<<<< HEAD
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _nextPage() {
-    if (_currentPage < _pages.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-      );
-    } else {
-      _navigateToNext();
-    }
-  }
-
-  void _skip() {
-    _navigateToNext();
-  }
-
-//after the introduction of the app, then this will be showing the next page
-  void _navigateToNext() {
-    Navigator.of(context).pushReplacementNamed('/login');
-=======
   void initState() {
     super.initState();
     _setupParticles();
@@ -154,17 +99,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void _setupParticles() {
     final rng = Random(7);
     _particles = List.generate(
-      10,
-      (i) => _Particle(
-        x: rng.nextDouble(),
-        y: rng.nextDouble(),
-        radius: 2.0 + rng.nextDouble() * 4.0,
-        speed: 0.025 + rng.nextDouble() * 0.04,
-        opacity: 0.06 + rng.nextDouble() * 0.12,
-        drift: (rng.nextDouble() - 0.5) * 0.4,
-        phase: rng.nextDouble() * 2 * pi,
-      ),
-    );
+        10,
+        (i) => _Particle(
+              x: rng.nextDouble(),
+              y: rng.nextDouble(),
+              radius: 2.0 + rng.nextDouble() * 4.0,
+              speed: 0.025 + rng.nextDouble() * 0.04,
+              opacity: 0.06 + rng.nextDouble() * 0.12,
+              drift: (rng.nextDouble() - 0.5) * 0.4,
+              phase: rng.nextDouble() * 2 * pi,
+            ));
     _particleCtrl = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 12),
@@ -176,41 +120,41 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 750),
     );
-    _iconSlideT = Tween<double>(begin: 0.0, end: 1.0).animate(
+
+    // ── Icon: pop/zoom-in — scales from 0 to 1 with a slight overshoot, then settles ──
+    _iconScale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _pageCtrl,
-        curve: const Interval(0.0, 0.55, curve: Curves.easeOutCubic),
-      ),
+          parent: _pageCtrl,
+          curve: const Interval(0.0, 0.55, curve: _NintendoBounce())),
     );
     _iconFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _pageCtrl,
-        curve: const Interval(0.0, 0.35, curve: Curves.easeOut),
-      ),
+          parent: _pageCtrl,
+          curve: const Interval(0.0, 0.25, curve: Curves.easeOut)),
     );
+
+    // ── Title: horizontal slide progress 0→1, direction applied in build ──
     _titleSlideT = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _pageCtrl,
-        curve: const Interval(0.15, 0.65, curve: Curves.easeOutCubic),
-      ),
+          parent: _pageCtrl,
+          curve: const Interval(0.10, 0.60, curve: Curves.easeOutCubic)),
     );
     _titleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _pageCtrl,
-        curve: const Interval(0.16, 0.42, curve: Curves.easeOut),
-      ),
+          parent: _pageCtrl,
+          curve: const Interval(0.10, 0.38, curve: Curves.easeOut)),
     );
+
+    // ── Subtitle: slightly delayed slide in same direction ──
     _subtitleSlideT = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _pageCtrl,
-        curve: const Interval(0.35, 0.82, curve: Curves.easeOutCubic),
-      ),
+          parent: _pageCtrl,
+          curve: const Interval(0.22, 0.72, curve: Curves.easeOutCubic)),
     );
     _subtitleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _pageCtrl,
-        curve: const Interval(0.33, 0.65, curve: Curves.easeOut),
-      ),
+          parent: _pageCtrl,
+          curve: const Interval(0.22, 0.52, curve: Curves.easeOut)),
     );
   }
 
@@ -222,75 +166,64 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     // Phase 1 (0–40%): white circle sweeps across screen
     _outroExpand = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.0, 0.40, curve: Curves.easeInOut),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.0, 0.40, curve: Curves.easeInOut)),
     );
     // Phase 2 (38–70%): logo pops in
     _outroLogoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.38, 0.58, curve: Curves.easeOut),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.38, 0.58, curve: Curves.easeOut)),
     );
     _outroLogoScale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.36, 0.60, curve: _NintendoBounce()),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.36, 0.60, curve: _NintendoBounce())),
     );
     // Phase 3 (54–100%): welcome lines stagger in
     _outroLine1Opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.54, 0.70, curve: Curves.easeOut),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.54, 0.70, curve: Curves.easeOut)),
     );
-    _outroLine1Slide =
-        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _outroCtrl,
-            curve: const Interval(0.54, 0.72, curve: Curves.easeOutBack),
-          ),
-        );
+    _outroLine1Slide = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+        parent: _outroCtrl,
+        curve: const Interval(0.54, 0.72, curve: Curves.easeOutBack)));
     _outroLine2Opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.64, 0.78, curve: Curves.easeOut),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.64, 0.78, curve: Curves.easeOut)),
     );
-    _outroLine2Slide =
-        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _outroCtrl,
-            curve: const Interval(0.64, 0.80, curve: Curves.easeOutBack),
-          ),
-        );
+    _outroLine2Slide = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+        parent: _outroCtrl,
+        curve: const Interval(0.64, 0.80, curve: Curves.easeOutBack)));
     _outroLine3Opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.74, 0.88, curve: Curves.easeOut),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.74, 0.88, curve: Curves.easeOut)),
     );
-    _outroLine3Slide =
-        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _outroCtrl,
-            curve: const Interval(0.74, 0.90, curve: Curves.easeOutBack),
-          ),
-        );
+    _outroLine3Slide = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+        parent: _outroCtrl,
+        curve: const Interval(0.74, 0.90, curve: Curves.easeOutBack)));
     // Check burst (72–92%)
     _outroCheckScale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.72, 0.92, curve: _NintendoBounce()),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.72, 0.92, curve: _NintendoBounce())),
     );
     _outroCheckOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _outroCtrl,
-        curve: const Interval(0.72, 0.82, curve: Curves.easeOut),
-      ),
+          parent: _outroCtrl,
+          curve: const Interval(0.72, 0.82, curve: Curves.easeOut)),
     );
   }
 
@@ -331,7 +264,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     if (!mounted) return;
     HapticFeedback.heavyImpact();
     Navigator.of(context).pushReplacementNamed('/register');
->>>>>>> 6586c5f (Add core models and test widget for UI components)
   }
 
   @override
@@ -340,99 +272,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final colorScheme = theme.colorScheme;
 
     return Container(
-<<<<<<< HEAD
-      decoration: const BoxDecoration(
-        gradient: AppColors.primaryGradient,
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Skip Button
-              // Align(
-              //   alignment: Alignment.topRight,
-              //   child: Padding(
-              //     padding: const EdgeInsets.all(AppSizes.md),
-              //     child: TextButton(
-              //       onPressed: _skip,
-              //       child: Text(
-              //         'Skip',
-              //         style: TextStyle(
-              //           color: colorScheme.onSurface,
-              //           fontWeight: FontWeight.w500,
-              //         ),
-              //       ),
-              //     ),
-              //   ),
-              // ),
-
-              // Page View
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: (index) {
-                    setState(() => _currentPage = index);
-                  },
-                  itemCount: _pages.length,
-                  itemBuilder: (context, index) {
-                    return _buildPage(_pages[index]);
-                  },
-                ),
-              ),
-
-              // Page Indicators
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSizes.lg),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(_pages.length, (index) {
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: _currentPage == index ? 24 : 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: _currentPage == index
-                            ? colorScheme.primary
-                            : colorScheme.onSurface.withOpacity(0.3),
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.radiusFull),
-                      ),
-                    );
-                  }),
-                ),
-              ),
-
-              // Action Buttons
-              Padding(
-                padding: const EdgeInsets.all(AppSizes.lg),
-                child: Column(
-                  children: [
-                    PrimaryButton(
-                      text: _currentPage == _pages.length - 1
-                          ? 'Get Started'
-                          : 'Next',
-                      onPressed: _nextPage,
-                    ),
-                    if (_currentPage < _pages.length - 1) ...[
-                      const SizedBox(height: AppSizes.md),
-                      TextButton(
-                        onPressed: _skip,
-                        child: Text(
-                          'Skip for now',
-                          style: TextStyle(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-=======
       decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -450,9 +289,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       physics: const BouncingScrollPhysics(),
                       onPageChanged: (index) {
                         if (!mounted) return;
-                        final direction = index >= _currentPage ? 1 : -1;
+                        final dir = index > _currentPage ? 1 : -1;
                         setState(() {
-                          _pageDirection = direction;
+                          _pageDirection = dir;
                           _currentPage = index;
                         });
                         HapticFeedback.selectionClick();
@@ -463,18 +302,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         if (index == _currentPage) {
                           return RepaintBoundary(
                             child: _buildAnimatedPage(
-                              _pages[index],
-                              theme,
-                              colorScheme,
-                            ),
+                                _pages[index], theme, colorScheme),
                           );
                         }
                         return RepaintBoundary(
                           child: _buildStaticPage(
-                            _pages[index],
-                            theme,
-                            colorScheme,
-                          ),
+                              _pages[index], theme, colorScheme),
                         );
                       },
                     ),
@@ -487,76 +320,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ),
             RepaintBoundary(child: _buildOutroOverlay()),
           ],
->>>>>>> 6586c5f (Add core models and test widget for UI components)
         ),
       ),
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildPage(OnboardingPage page) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSizes.xl),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Icon Container
-          Container(
-            width: 150,
-            height: 150,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.primary, width: 7),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
-                  blurRadius: 40,
-                  offset: const Offset(0, 20),
-                ),
-              ],
-            ),
-            child: Icon(
-              page.icon,
-              size: 72,
-              color: AppColors.primary,
-            ),
-          ),
-
-          const SizedBox(height: AppSizes.xxl),
-
-          // Title
-          GradientText(
-            page.title,
-            gradient: const LinearGradient(
-              colors: [
-                Color(0xFF1479FF),
-                Color(0xFF147EFF),
-                Color(0xFF149AFF),
-              ],
-              stops: [0.0, 0.46, 1.0],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-            style: theme.textTheme.displaySmall
-                ?.copyWith(fontWeight: FontWeight.bold, fontSize: 40),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: AppSizes.md),
-
-          // Subtitle
-          Text(
-            page.subtitle,
-            style: theme.textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.6,
-                fontSize: 16,
-                fontWeight: FontWeight.w100),
-=======
   Widget _buildTopNav() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -576,13 +344,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   }
                 : null,
             style: TextButton.styleFrom(foregroundColor: Colors.white),
-            child: const Text(
-              '< Back',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            child: const Text('< Back',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w500)),
           ),
         ),
         AnimatedOpacity(
@@ -591,13 +355,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           child: TextButton(
             onPressed: _currentPage < _pages.length - 1 ? _skip : null,
             style: TextButton.styleFrom(foregroundColor: Colors.white),
-            child: const Text(
-              'Skip',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            child: const Text('Skip',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w500)),
           ),
         ),
       ],
@@ -632,7 +392,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildButton() {
     String label;
     if (_currentPage == 0) {
-      label = 'Continue';
+      label = 'Continue →';
     } else if (_currentPage == _pages.length - 1) {
       label = 'Get Started';
     } else {
@@ -640,62 +400,155 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
     return Padding(
       padding: const EdgeInsets.all(AppSizes.lg),
-      child: _NintendoPressButton(text: label, onPressed: _nextPage),
+      child: _NintendoPressButton(
+        text: label,
+        onPressed: _nextPage,
+      ),
     );
   }
 
   Widget _buildAnimatedPage(
-    OnboardingPage page,
-    ThemeData theme,
-    ColorScheme colorScheme,
-  ) {
+      OnboardingPage page, ThemeData theme, ColorScheme colorScheme) {
     final index = _pages.indexOf(page);
     final isHero = index == 0;
 
-    return AnimatedBuilder(
-      animation: _pageCtrl,
-      builder: (_, __) {
-        return Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: isHero ? AppSizes.lg : AppSizes.xl,
-          ),
-          child: Column(
+    if (isHero) {
+      return AnimatedBuilder(
+        animation: _pageCtrl,
+        builder: (_, __) {
+          return Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // ── Visual: illustration or icon ──
+              // ── Logo icon: pop/zoom-in ──
               Opacity(
                 opacity: _iconFade.value.clamp(0.0, 1.0),
-                child: Transform.translate(
-                  offset: Offset(
-                    (1.0 - _iconSlideT.value) * 92 * _pageDirection,
-                    0,
-                  ),
-                  child: _buildPageVisual(page, index),
+                child: Transform.scale(
+                  scale: _iconScale.value.clamp(0.0, 1.3),
+                  child: const _LogoIconBox(),
                 ),
               ),
 
-              SizedBox(height: isHero ? AppSizes.lg : AppSizes.xxl),
+              const SizedBox(height: 40),
 
-              // ── Title: slides horizontally with page direction ──
+              // ── "Hi, Welcome to" label ──
               Opacity(
                 opacity: _titleFade.value.clamp(0.0, 1.0),
                 child: Transform.translate(
                   offset: Offset(
-                    (1.0 - _titleSlideT.value) * 70 * _pageDirection,
+                    (1.0 - _titleSlideT.value) * 80 * _pageDirection,
+                    0,
+                  ),
+                  child: Text(
+                    'Hi, Welcome to',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.85),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 0.2,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              // ── "Lern" big bold title — gradient blue ──
+              Opacity(
+                opacity: _titleFade.value.clamp(0.0, 1.0),
+                child: Transform.translate(
+                  offset: Offset(
+                    (1.0 - _titleSlideT.value) * 80 * _pageDirection,
+                    0,
+                  ),
+                  child: GradientText(
+                    'Lern',
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF1479FF),
+                        Color(0xFF147EFF),
+                        Color(0xFF149AFF)
+                      ],
+                      stops: [0.0, 0.28, 1.0],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 80,
+                      letterSpacing: -3,
+                      height: 1.0,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── Subtitle — blue gradient tint ──
+              Opacity(
+                opacity: _subtitleFade.value.clamp(0.0, 1.0),
+                child: Transform.translate(
+                  offset: Offset(
+                    (1.0 - _subtitleSlideT.value) * 60 * _pageDirection,
+                    0,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      page.subtitle,
+                      style: const TextStyle(
+                        color: Color(0xFF1479FF),
+                        height: 1.6,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w300,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 3,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    }
+
+    // ── Regular pages (1–3) ──
+    return AnimatedBuilder(
+      animation: _pageCtrl,
+      builder: (_, __) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSizes.xl),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Opacity(
+                opacity: _iconFade.value.clamp(0.0, 1.0),
+                child: Transform.scale(
+                  scale: _iconScale.value.clamp(0.0, 1.3),
+                  child: _buildIconContainer(page, index),
+                ),
+              ),
+              const SizedBox(height: AppSizes.xxl),
+              Opacity(
+                opacity: _titleFade.value.clamp(0.0, 1.0),
+                child: Transform.translate(
+                  offset: Offset(
+                    (1.0 - _titleSlideT.value) * 80 * _pageDirection,
                     0,
                   ),
                   child: _buildTitleText(page, theme),
                 ),
               ),
-
               const SizedBox(height: AppSizes.md),
-
-              // ── Subtitle ──
               Opacity(
                 opacity: _subtitleFade.value.clamp(0.0, 1.0),
                 child: Transform.translate(
                   offset: Offset(
-                    (1.0 - _subtitleSlideT.value) * 56 * _pageDirection,
+                    (1.0 - _subtitleSlideT.value) * 60 * _pageDirection,
                     0,
                   ),
                   child: Text(
@@ -703,7 +556,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                       height: 1.6,
-                      fontSize: isHero ? 17 : 16,
+                      fontSize: 16,
                       fontWeight: FontWeight.w300,
                     ),
                     textAlign: TextAlign.center,
@@ -720,21 +573,68 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildStaticPage(
-    OnboardingPage page,
-    ThemeData theme,
-    ColorScheme colorScheme,
-  ) {
+      OnboardingPage page, ThemeData theme, ColorScheme colorScheme) {
     final index = _pages.indexOf(page);
     final isHero = index == 0;
+
+    if (isHero) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const _LogoIconBox(),
+          const SizedBox(height: 40),
+          Text(
+            'Hi, Welcome to',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.85),
+              fontSize: 18,
+              fontWeight: FontWeight.w400,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          GradientText(
+            'Lern',
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1479FF), Color(0xFF147EFF), Color(0xFF149AFF)],
+              stops: [0.0, 0.28, 1.0],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 80,
+              letterSpacing: -3,
+              height: 1.0,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              page.subtitle,
+              style: const TextStyle(
+                color: Color(0xFF1479FF),
+                height: 1.6,
+                fontSize: 16,
+                fontWeight: FontWeight.w300,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+            ),
+          ),
+        ],
+      );
+    }
+
     return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isHero ? AppSizes.lg : AppSizes.xl,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: AppSizes.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildPageVisual(page, index),
-          SizedBox(height: isHero ? AppSizes.lg : AppSizes.xxl),
+          _buildIconContainer(page, index),
+          const SizedBox(height: AppSizes.xxl),
           _buildTitleText(page, theme),
           const SizedBox(height: AppSizes.md),
           Text(
@@ -742,10 +642,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             style: theme.textTheme.bodyLarge?.copyWith(
               color: colorScheme.onSurfaceVariant,
               height: 1.6,
-              fontSize: isHero ? 17 : 16,
+              fontSize: 16,
               fontWeight: FontWeight.w300,
             ),
->>>>>>> 6586c5f (Add core models and test widget for UI components)
             textAlign: TextAlign.center,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
@@ -753,14 +652,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ],
       ),
     );
-  }
-<<<<<<< HEAD
-=======
-
-  // Returns the right visual for each page — SVG illustration for p0, styled icon for rest
-  Widget _buildPageVisual(OnboardingPage page, int index) {
-    if (index == 0) return const _HeroIllustration();
-    return _buildIconContainer(page, index);
   }
 
   // Title: page 0 gets huge extrabold, rest get standard 40sp w800
@@ -804,22 +695,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildIconContainer(OnboardingPage page, int index) {
     // Each page gets a unique icon arrangement with layered circles
     final configs = [
-      _IconConfig(Icons.school_rounded, const [
-        Color(0xFF1479FF),
-        Color(0xFF14A5FF),
-      ]),
-      _IconConfig(Icons.person_search_rounded, const [
-        Color(0xFF1479FF),
-        Color(0xFF14A5FF),
-      ]),
-      _IconConfig(Icons.verified_rounded, const [
-        Color(0xFF1479FF),
-        Color(0xFF14A5FF),
-      ]),
-      _IconConfig(Icons.auto_stories_rounded, const [
-        Color(0xFF1479FF),
-        Color(0xFF14A5FF),
-      ]),
+      _IconConfig(
+          Icons.school_rounded, const [Color(0xFF1479FF), Color(0xFF14A5FF)]),
+      _IconConfig(Icons.person_search_rounded,
+          const [Color(0xFF1479FF), Color(0xFF14A5FF)]),
+      _IconConfig(
+          Icons.verified_rounded, const [Color(0xFF1479FF), Color(0xFF14A5FF)]),
+      _IconConfig(Icons.auto_stories_rounded,
+          const [Color(0xFF1479FF), Color(0xFF14A5FF)]),
     ];
     final cfg = configs[index.clamp(0, configs.length - 1)];
 
@@ -903,23 +786,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       opacity: logoOp,
                       child: Transform.scale(
                         scale: logoSc,
-                        child: Container(
-                          width: 88,
-                          height: 88,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [Color(0xFF1479FF), Color(0xFF14A5FF)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.school_rounded,
-                            size: 46,
-                            color: Colors.white,
-                          ),
-                        ),
+                        child: const _LogoIconBox(),
                       ),
                     ),
 
@@ -1032,10 +899,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       child: AnimatedBuilder(
         animation: _particleCtrl,
         builder: (_, __) => CustomPaint(
-          painter: _ParticlePainter(
-            particles: _particles,
-            t: _particleCtrl.value,
-          ),
+          painter:
+              _ParticlePainter(particles: _particles, t: _particleCtrl.value),
           size: Size.infinite,
         ),
       ),
@@ -1076,7 +941,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 // ─────────────────────────────────────────────────────────────
 
 class _NintendoPressButton extends StatefulWidget {
-  const _NintendoPressButton({required this.text, required this.onPressed});
+  const _NintendoPressButton({
+    required this.text,
+    required this.onPressed,
+  });
   final String text;
   final VoidCallback onPressed;
 
@@ -1102,14 +970,12 @@ class _NintendoPressButtonState extends State<_NintendoPressButton>
       reverseDuration: const Duration(milliseconds: 420),
     );
 
-    _scaleX = Tween<double>(
-      begin: 1.0,
-      end: 1.07,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
-    _scaleY = Tween<double>(
-      begin: 1.0,
-      end: 0.91,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
+    _scaleX = Tween<double>(begin: 1.0, end: 1.07).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeIn),
+    );
+    _scaleY = Tween<double>(begin: 1.0, end: 0.91).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeIn),
+    );
   }
 
   @override
@@ -1185,11 +1051,8 @@ class _CircleExpandPainter extends CustomPainter {
   final double radius;
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawCircle(
-      Offset(size.width / 2, size.height / 2),
-      radius,
-      Paint()..color = Colors.white,
-    );
+    canvas.drawCircle(Offset(size.width / 2, size.height / 2), radius,
+        Paint()..color = Colors.white);
   }
 
   @override
@@ -1209,10 +1072,8 @@ class _ParticlePainter extends CustomPainter {
           .clamp(0.0, size.width);
       final y = ((p.y - progress * 0.1) % 1.0) * size.height;
       final opacity =
-          (p.opacity * (0.5 + 0.5 * sin(p.phase + progress * 2 * pi))).clamp(
-            0.0,
-            1.0,
-          );
+          (p.opacity * (0.5 + 0.5 * sin(p.phase + progress * 2 * pi)))
+              .clamp(0.0, 1.0);
       paint.color = Color.fromRGBO(255, 255, 255, opacity);
       canvas.drawCircle(Offset(x, y), p.radius, paint);
     }
@@ -1223,217 +1084,132 @@ class _ParticlePainter extends CustomPainter {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Hero Illustration — page 0 SVG-style art drawn with Canvas
+// Lern Logo — page 0 hero, pixel-traced from logo PNG
+// White cursive "L" with cyan 3D offset shadow
 // ─────────────────────────────────────────────────────────────
 
-class _HeroIllustration extends StatelessWidget {
-  const _HeroIllustration();
+/// 90×90 blue rounded-rectangle logo box — matches the design screenshot exactly.
+/// The Lern "L" logo painter sits inside a blue rounded square (radius 16).
+class _LogoIconBox extends StatelessWidget {
+  const _LogoIconBox();
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 280,
-      height: 220,
-      child: CustomPaint(painter: _HeroIllustrationPainter()),
+    return Container(
+      width: 90,
+      height: 90,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1479FF),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1479FF).withOpacity(0.40),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: CustomPaint(painter: _LernLogoPainter()),
+      ),
     );
   }
 }
 
-class _HeroIllustrationPainter extends CustomPainter {
+/// Draws the Lern "L" lettermark exactly as in lern-logo.png:
+/// - Chunky cursive "L" with rounded cap at top
+/// - Vertical stem + horizontal bar at bottom
+/// - Open "U" tail at base (two legs curving down)
+/// - Cyan (#1AE8FF) offset shadow ~16px left, 14px down
+/// - White letterform on top
+class _LernLogoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final paint = Paint()..isAntiAlias = true;
+    // Original artboard: 480×480
+    final double sx = size.width / 480;
+    final double sy = size.height / 480;
 
-    // ── Desk platform ──
-    paint
-      ..color = const Color(0xFFE8F0FE)
-      ..style = PaintingStyle.fill;
-    final deskRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.05, h * 0.72, w * 0.90, h * 0.14),
-      const Radius.circular(16),
-    );
-    canvas.drawRRect(deskRect, paint);
+    // Scale helper
+    Path buildL(double offX, double offY) {
+      // All coords in original 480px space
+      double x(double v) => (v + offX) * sx;
+      double y(double v) => (v + offY) * sy;
 
-    // desk top edge highlight
-    paint.color = const Color(0xFFBDD0FC);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(w * 0.05, h * 0.72, w * 0.90, h * 0.025),
-        const Radius.circular(16),
-      ),
-      paint,
-    );
+      final path = Path();
 
-    // ── Laptop body ──
-    paint.color = const Color(0xFF1479FF);
-    final laptopBase = RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.22, h * 0.60, w * 0.56, h * 0.13),
-      const Radius.circular(6),
-    );
-    canvas.drawRRect(laptopBase, paint);
+      // ── Top of cap — crown curves left then right ──
+      path.moveTo(x(190), y(80));
+      path.cubicTo(x(218), y(76), x(252), y(86), x(252), y(115));
 
-    // laptop hinge notch
-    paint.color = const Color(0xFF0D5FCC);
-    canvas.drawRect(
-      Rect.fromLTWH(w * 0.44, h * 0.60, w * 0.12, h * 0.025),
-      paint,
-    );
+      // ── Right side of cap into stem (right edge) ──
+      path.cubicTo(x(252), y(138), x(252), y(150), x(252), y(158));
 
-    // laptop screen outer
-    paint.color = const Color(0xFF1479FF);
-    final screenOuter = RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.25, h * 0.22, w * 0.50, h * 0.39),
-      const Radius.circular(10),
-    );
-    canvas.drawRRect(screenOuter, paint);
+      // ── Right edge of stem, very slight taper going down ──
+      path.lineTo(x(241), y(240));
+      path.lineTo(x(236), y(282));
 
-    // screen glass
-    paint.color = const Color(0xFFEEF4FF);
-    final screen = RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.28, h * 0.25, w * 0.44, h * 0.33),
-      const Radius.circular(6),
-    );
-    canvas.drawRRect(screen, paint);
+      // ── Stem right side continues, right arm starts to emerge ──
+      path.cubicTo(x(234), y(300), x(232), y(312), x(230), y(318));
 
-    // ── Screen content lines (simulated UI) ──
-    paint.color = const Color(0xFF1479FF).withOpacity(0.25);
-    for (int i = 0; i < 4; i++) {
-      final lineW = i == 0 ? w * 0.28 : w * 0.18 + (i * w * 0.03);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(w * 0.315, h * 0.305 + i * h * 0.065, lineW, h * 0.022),
-          const Radius.circular(4),
-        ),
-        paint,
-      );
+      // ── Merge point — full horizontal bar begins ──
+      // Transition: stem joins bar, bar extends right to ~357
+      path.cubicTo(x(235), y(322), x(280), y(322), x(357), y(322));
+
+      // ── Bottom-right corner of horizontal bar ──
+      path.cubicTo(x(360), y(322), x(360), y(326), x(357), y(358));
+
+      // ── Right leg of U tail — curves outward and down ──
+      path.cubicTo(x(356), y(363), x(348), y(368), x(308), y(395));
+      path.cubicTo(x(298), y(401), x(285), y(401), x(268), y(395));
+
+      // ── U notch — inward curve between the two legs ──
+      path.cubicTo(x(248), y(387), x(237), y(374), x(226), y(364));
+
+      // ── Left leg inner edge — comes up slightly then turns ──
+      path.cubicTo(x(216), y(354), x(208), y(352), x(207), y(369));
+
+      // ── Left leg curves down and outward ──
+      path.cubicTo(x(203), y(381), x(188), y(392), x(162), y(395));
+      path.cubicTo(x(146), y(396), x(130), y(387), x(131), y(358));
+
+      // ── Bottom of bar, left side going back left ──
+      path.lineTo(x(131), y(322));
+
+      // ── Left side of stem going back up ──
+      path.lineTo(x(165), y(312));
+      path.lineTo(x(165), y(158));
+
+      // ── Top-left of cap: curves back up to start ──
+      path.cubicTo(x(165), y(140), x(152), y(122), x(128), y(112));
+      path.cubicTo(x(118), y(100), x(130), y(78), x(165), y(78));
+      path.cubicTo(x(178), y(77), x(186), y(78), x(190), y(80));
+
+      path.close();
+      return path;
     }
 
-    // screen avatar circle
-    paint.color = const Color(0xFF1479FF).withOpacity(0.35);
-    canvas.drawCircle(Offset(w * 0.355, h * 0.315), h * 0.028, paint);
-
-    // ── Floating book card (left) ──
-    paint
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-    final shadow = Paint()
-      ..color = const Color(0xFF1479FF).withOpacity(0.12)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(w * 0.01, h * 0.33, w * 0.18, h * 0.22),
-        const Radius.circular(12),
-      ),
-      shadow,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(w * 0.02, h * 0.32, w * 0.18, h * 0.22),
-        const Radius.circular(12),
-      ),
-      paint,
-    );
-    // book spine
-    paint.color = const Color(0xFF1479FF);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(w * 0.02, h * 0.32, w * 0.035, h * 0.22),
-        const Radius.circular(12),
-      ),
-      paint,
-    );
-    // book lines
-    paint.color = const Color(0xFFBDD0FC);
-    for (int i = 0; i < 3; i++) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(
-            w * 0.07,
-            h * 0.37 + i * h * 0.055,
-            w * 0.10,
-            h * 0.018,
-          ),
-          const Radius.circular(3),
-        ),
-        paint,
-      );
-    }
-
-    // ── Floating star badge (right) ──
-    paint.color = Colors.white;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(w * 0.80, h * 0.28, w * 0.18, h * 0.18),
-        const Radius.circular(12),
-      ),
-      shadow,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(w * 0.80, h * 0.27, w * 0.18, h * 0.18),
-        const Radius.circular(12),
-      ),
-      paint,
-    );
-    // star
-    _drawStar(
-      canvas,
-      Offset(w * 0.89, h * 0.36),
-      h * 0.042,
-      const Color(0xFFFFB800),
+    // Pass 1: cyan shadow (offset left/up as 3D depth effect)
+    canvas.drawPath(
+      buildL(-16, 14),
+      Paint()
+        ..color = const Color(0xFF1AE8FF)
+        ..style = PaintingStyle.fill
+        ..isAntiAlias = true,
     );
 
-    // ── Floating chat bubble (top center) ──
-    paint.color = const Color(0xFF1479FF);
-    final bubble = RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.36, h * 0.04, w * 0.28, h * 0.12),
-      const Radius.circular(14),
+    // Pass 2: white letter on top
+    canvas.drawPath(
+      buildL(0, 0),
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.fill
+        ..isAntiAlias = true,
     );
-    canvas.drawRRect(bubble, paint);
-    // bubble tail
-    final tailPath = Path()
-      ..moveTo(w * 0.44, h * 0.155)
-      ..lineTo(w * 0.41, h * 0.19)
-      ..lineTo(w * 0.49, h * 0.155)
-      ..close();
-    canvas.drawPath(tailPath, paint);
-    // bubble dots
-    paint.color = Colors.white;
-    for (int i = 0; i < 3; i++) {
-      canvas.drawCircle(
-        Offset(w * 0.44 + i * w * 0.07, h * 0.10),
-        h * 0.016,
-        paint,
-      );
-    }
-  }
-
-  void _drawStar(Canvas canvas, Offset center, double radius, Color color) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true;
-    final path = Path();
-    const points = 5;
-    final innerRadius = radius * 0.42;
-    for (int i = 0; i < points * 2; i++) {
-      final angle = (i * pi / points) - pi / 2;
-      final r = i.isEven ? radius : innerRadius;
-      final x = center.dx + cos(angle) * r;
-      final y = center.dy + sin(angle) * r;
-      if (i == 0)
-        path.moveTo(x, y);
-      else
-        path.lineTo(x, y);
-    }
-    path.close();
-    canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(_HeroIllustrationPainter _) => false;
+  bool shouldRepaint(_LernLogoPainter _) => false;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1457,17 +1233,12 @@ class _Particle {
     required this.drift,
     required this.phase,
   });
->>>>>>> 6586c5f (Add core models and test widget for UI components)
 }
 
 class OnboardingPage {
   final IconData icon;
   final String title;
   final String subtitle;
-<<<<<<< HEAD
-
-=======
->>>>>>> 6586c5f (Add core models and test widget for UI components)
   const OnboardingPage({
     required this.icon,
     required this.title,
@@ -1476,39 +1247,19 @@ class OnboardingPage {
 }
 
 class GradientText extends StatelessWidget {
-  const GradientText(
-    this.text, {
-    super.key,
-    required this.gradient,
-    this.style,
-    this.textAlign,
-  });
+  const GradientText(this.text,
+      {super.key, required this.gradient, this.style, this.textAlign});
   final String text;
   final TextStyle? style;
   final Gradient gradient;
   final TextAlign? textAlign;
-<<<<<<< HEAD
-
-=======
->>>>>>> 6586c5f (Add core models and test widget for UI components)
   @override
   Widget build(BuildContext context) {
     return ShaderMask(
       blendMode: BlendMode.srcIn,
-<<<<<<< HEAD
-      shaderCallback: (bounds) => gradient.createShader(
-        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-      ),
-      child: Text(
-        text,
-        style: style,
-        textAlign: textAlign,
-      ),
-=======
       shaderCallback: (b) =>
           gradient.createShader(Rect.fromLTWH(0, 0, b.width, b.height)),
       child: Text(text, style: style, textAlign: textAlign),
->>>>>>> 6586c5f (Add core models and test widget for UI components)
     );
   }
 }
