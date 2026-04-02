@@ -478,21 +478,84 @@ Future<SomeResult> getSomething(String id) async {
 
 ## 🧪 Testing
 
-### Backend Tests
+### Running Tests
+
+#### Backend (NestJS)
 
 ```bash
 cd _server
 
-npm run test          # Unit tests
+npm run test          # Run all unit tests
+npm run test:watch    # Watch mode (re-runs on file save)
+npm run test:cov      # Unit tests + coverage report
 npm run test:e2e      # End-to-end tests
-npm run test:cov      # Coverage report
 ```
 
-### Frontend Tests
+#### Frontend (Flutter)
 
 ```bash
 flutter test
 ```
+
+---
+
+### Backend Test Coverage
+
+The backend has **62 unit tests** across 5 test suites. Every service method and controller endpoint is covered. All database calls are mocked via `PrismaService` — no real DB connection needed to run tests.
+
+#### `auth.service.spec.ts` — 18 tests
+
+| Group | What's tested |
+|---|---|
+| `signUp` | Creates user, defaults role to `STUDENT`, uppercases role, hashes password (never stores plaintext), rejects duplicate email |
+| `login` | Returns tokens on valid credentials, throws on unknown email, throws on wrong password, verifies against stored hash |
+| `googleLogin` | Creates new user if none exists, reuses existing account, updates profile when `full_name`/`avatar_url` is missing, throws on invalid token, throws when Google payload has no email |
+
+#### `auth.controller.spec.ts` — 8 tests
+
+| Endpoint | What's tested |
+|---|---|
+| `GET /auth` | Returns path confirmation string |
+| `POST /auth/signup` | Delegates to service with correct args, passes `undefined` role when omitted, returns service response |
+| `POST /auth/login` | Delegates to service, propagates errors |
+| `POST /auth/google` | Delegates to service with token + role, propagates errors |
+
+#### `user.service.spec.ts` — 24 tests
+
+| Group | What's tested |
+|---|---|
+| `getAllTutorProfile` | Returns list, returns empty array, selects correct fields |
+| `getAllStudentProfile` | Returns list, returns empty array |
+| `getTutorFilteredBy` | No filters, search query, subject filter, maxPrice filter, all filters combined, no extra fields when no filters, orders by `created_at desc` |
+| `getTutorDetailProfile` | Returns tutor with active offers, only queries `is_active: true` offers, throws `404` when not found |
+| `updateProfile` | Updates and returns profile, uppercases role, skips role field when not provided, sets `updated_at` timestamp, throws `400` on empty `userId`, throws `404` when user doesn't exist, supports partial updates |
+
+#### `user.controller.spec.ts` — 12 tests
+
+| Endpoint | What's tested |
+|---|---|
+| `GET /user` | Returns message and timestamp |
+| `GET /user/tutors/all` | Delegates to service |
+| `GET /user/student` | Delegates to service |
+| `GET /user/tutors` | Passes all query params, parses `maxPrice` string → number, passes `undefined` when params absent |
+| `GET /user/tutor/:id` | Returns tutor detail, propagates `404` |
+| `PATCH /user/update/profile` | Resolves `userId` from `req.user.userId`, falls back to `.sub`, falls back to `.id`, throws `401` when all absent, propagates service errors |
+
+---
+
+### Test Configuration
+
+Tests use `@nestjs/testing` with Jest + ts-jest. The jest config in `package.json` includes two key settings that make it work with this project:
+
+```json
+"moduleNameMapper": {
+  "^src/(.*)$": "<rootDir>/$1",
+  "^(\\.{1,2}/.*)\\.js$": "$1"
+}
+```
+
+- `src/` alias maps to the `rootDir` so absolute imports resolve correctly
+- `.js` extension stripping handles the ESM-style imports in the generated Prisma client
 
 <br/>
 
