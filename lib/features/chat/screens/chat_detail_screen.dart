@@ -20,7 +20,7 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  bool _isTyping = false;
+  final bool _isTyping = false;
 
   final List<ChatMessage> _messages = [
     ChatMessage(

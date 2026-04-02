@@ -146,11 +146,9 @@ class TextInput extends StatelessWidget {
                 ? Icon(
                     prefixIcon,
                     size: _fontSize + 4,
-                    color: borderColor != null
-                        ? borderColor
-                        : enabled
+                    color: borderColor ?? (enabled
                             ? colorScheme.onSurfaceVariant
-                            : colorScheme.onSurface.withOpacity(0.38),
+                            : colorScheme.onSurface.withOpacity(0.38)),
                   )
                 : null,
             suffixIcon: suffixIcon != null
@@ -158,11 +156,9 @@ class TextInput extends StatelessWidget {
                     icon: Icon(
                       suffixIcon,
                       size: _fontSize + 4,
-                      color: borderColor != null
-                          ? borderColor
-                          : enabled
+                      color: borderColor ?? (enabled
                               ? colorScheme.onSurfaceVariant
-                              : colorScheme.onSurface.withOpacity(0.38),
+                              : colorScheme.onSurface.withOpacity(0.38)),
                     ),
                     onPressed: onSuffixIconPressed,
                   )

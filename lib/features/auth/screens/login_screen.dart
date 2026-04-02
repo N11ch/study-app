@@ -2,9 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:http/http.dart' as http;
-import '../../../core/constants/app_config.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_colors.dart';
@@ -94,11 +91,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleGoogleSignIn() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser != null) {
-        // Navigate to the next screen or handle the signed-in user
-        Navigator.of(context).pushReplacementNamed('/student-dashboard');
-      }
+      // final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      // if (googleUser != null) {
+      //   // Navigate to the next screen or handle the signed-in user
+      //   Navigator.of(context).pushReplacementNamed('/student-dashboard');
+      // }
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

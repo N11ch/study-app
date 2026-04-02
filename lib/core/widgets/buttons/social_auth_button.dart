@@ -5,13 +5,11 @@ import '../../constants/app_sizes.dart';
 /// Social auth button used for Google / Apple sign-in.
 ///
 /// The [icon] parameter lets you pass any widget (e.g. SVG, image).
-/**
-   * Social auth button used for Google / Apple sign-in.
-   * the [icon] will be look like this
-   * ```
-   * icon: const Icon(Icons.apple),
-   * ```
-   */
+/// Social auth button used for Google / Apple sign-in.
+/// the [icon] will be look like this
+/// ```
+/// icon: const Icon(Icons.apple),
+/// ```
 class SocialAuthButton extends StatelessWidget {
   
   const SocialAuthButton({
