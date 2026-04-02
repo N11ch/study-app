@@ -1,6 +1,5 @@
 ---
 title: Home
-nav_order: 1
 description: StudyApp — Peer-to-Peer Tutoring Marketplace
 permalink: /
 ---
@@ -8,13 +7,10 @@ permalink: /
 # 🎓 StudyApp
 
 **Peer-to-Peer Tutoring Marketplace**
-{: .fs-6 .fw-300 }
 
 Connect students with expert tutors. Learn on your terms.
-{: .fs-5 }
 
-[Read the Docs](docs){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[View on GitHub](https://github.com/hiyokun-d/study-app){: .btn .fs-5 .mb-4 .mb-md-0 }
+[📖 Read the Docs](docs) &nbsp;|&nbsp; [GitHub](https://github.com/hiyokun-d/study-app)
 
 ---
 

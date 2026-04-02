@@ -1,22 +1,12 @@
 ---
 title: Documentation
-nav_order: 2
 description: Full developer reference — architecture, API, testing, and how-to guides
 permalink: /docs
-has_toc: true
 ---
 
 # StudyApp — Developer Documentation
-{: .no_toc }
 
 > This document is the single source of truth for how StudyApp is built, how every piece works, and how to extend it. Read this before touching any code.
-
-<details open markdown="block">
-  <summary>Table of Contents</summary>
-  {: .text-delta }
-- TOC
-{:toc}
-</details>
 
 ---
 
