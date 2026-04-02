@@ -12,7 +12,7 @@ class StudyApp extends StatefulWidget {
 
 class _StudyAppState extends State<StudyApp> {
   // ThemeMode _themeMode = ThemeMode.system
-  ThemeMode _themeMode = ThemeMode.light;
+  final ThemeMode _themeMode = ThemeMode.light;
 
   @override
   Widget build(BuildContext context) {

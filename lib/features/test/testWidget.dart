@@ -229,12 +229,10 @@ class _TestWidgetState extends State<TestWidget> {
             CustomCheckbox(
               value: _isChecked,
               onChanged: (newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _isChecked = newValue;
-                  });
-                }
-              },
+                setState(() {
+                  _isChecked = newValue;
+                });
+                            },
               label: 'I agree to the terms and conditions',
             ),
           ],

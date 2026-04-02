@@ -262,7 +262,7 @@ class _HomeTab extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
-    final progress = (int index) => 0.3 + (index * 0.2);
+    double progress(int index) => 0.3 + (index * 0.2);
 
     return Container(
       width: 280,
