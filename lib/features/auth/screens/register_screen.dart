@@ -6,6 +6,7 @@ import 'package:http/http.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/auth_state.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 import '../../../core/widgets/inputs/text_input.dart';
 import '../../../core/widgets/inputs/password_text_field.dart';
@@ -51,44 +52,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
-      // TODO: Replace this delay with your actual NestJS HTTP POST request!
       try {
-        final response = await post(
+        final response = await http.post(
           Uri.parse('${AppConfig.API_URL}/auth/signup'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'email': _emailController.text,
+            'email': _emailController.text.trim(),
             'password': _passwordController.text,
           }),
         );
 
         if (!mounted) return;
-        final responseData = jsonDecode(response.body);
-        print(responseData);
+        final responseData =
+            jsonDecode(response.body) as Map<String, dynamic>;
 
-        // remove this later if we done in here
         if (response.statusCode == 200 || response.statusCode == 201) {
+          AuthState.instance.setFromResponse(responseData);
+
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Account created successfully, NOW TRY TO LOGIN!"),
+            const SnackBar(
+              content: Text('Account created successfully!'),
               backgroundColor: Colors.green,
             ),
           );
 
-          // TODO: CHANGE THIS LATER INTO UPDATE_PROFILE_SCREEN YOU PIECE OF SHIT
           Navigator.of(context).pushReplacementNamed('/update-profile');
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(responseData['message'] ??
-                  "Registration Failed, try again later"),
+                  'Registration failed, try again later'),
               backgroundColor: Colors.redAccent,
             ),
           );
         }
       } catch (e) {
         if (!mounted) return;
-        print("Register error (something error with the API): $e");
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Something went wrong. Please try again later.'),
