@@ -19,6 +19,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   bool _isLoading = false;
   String _selectedRole = 'STUDENT';
 
+  //* UPDATE PROFILE FUNCTION IS HERE!
   // THIS IS A DANGEROUS ZONE, IF YOU DON'T KNOW WHAT YOUR DOING THEN DON'T TOUCH IT
   // just pls don't touch this function
   // todo: implement this method if we already got the new style, atleast we already make it
