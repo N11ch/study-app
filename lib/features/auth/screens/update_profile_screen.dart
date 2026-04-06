@@ -100,10 +100,15 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      if (_selectedRole == 'TUTOR') {
-        Navigator.of(context).pushReplacementNamed('/teacher');
+final role = result.user?['role']?.toString();
+
+if (role == 'TUTOR') {
+  Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
+} else {
+  Navigator.of(context).pushReplacementNamed('/student-dashboard');
+}
       } else {
-        Navigator.of(context).pushReplacementNamed('/student');
+        Navigator.of(context).pushReplacementNamed('/student-dashboard');
       }
     }
   }

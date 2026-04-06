@@ -1,16 +1,17 @@
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/app_config.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/auth_state.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 import '../../../core/widgets/inputs/text_input.dart';
 import '../../../core/widgets/inputs/password_text_field.dart';
-import '../../../core/constants/app_config.dart';
 
 /// Register screen - same design as login page
 class RegisterScreen extends StatefulWidget {
