@@ -55,17 +55,17 @@ class _StudentDashboardState extends State<StudentDashboard> {
       height: 64,
       margin: const EdgeInsets.fromLTRB(24, 0, 24, 30),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(100),
         boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, 10))],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildNavItem(0, Icons.home_rounded, AppStrings.home),
-          _buildNavItem(1, Icons.calendar_today_rounded, AppStrings.schedule),
-          _buildNavItem(2, Icons.play_circle_rounded, AppStrings.myLearning),
-          _buildNavItem(3, Icons.person_rounded, AppStrings.profile),
+          _navItem(0, Icons.home_rounded, AppStrings.home),
+          _navItem(1, Icons.calendar_today_rounded, AppStrings.schedule),
+          _navItem(2, Icons.play_circle_rounded, AppStrings.myLearning),
+          _navItem(3, Icons.person_rounded, AppStrings.profile),
         ],
       ),
     );
@@ -112,8 +112,11 @@ class _HomeTab extends StatelessWidget {
   Widget _buildHeader(BuildContext context) {
     final displayName = AuthState.instance.displayName;
     return SafeArea(
+      bottom: false,
       child: Padding(
-        padding: const EdgeInsets.all(AppSizes.lg),
+        padding: const EdgeInsets.fromLTRB(
+          AppSizes.lg, AppSizes.lg, AppSizes.lg, AppSizes.md,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -127,6 +130,7 @@ class _HomeTab extends StatelessWidget {
             ),
             const SizedBox(height: AppSizes.lg),
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppColors.card,
@@ -136,6 +140,7 @@ class _HomeTab extends StatelessWidget {
                 ],
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SearchInput(hint: 'Search tutor...'),
                   const Divider(height: 32),
@@ -201,6 +206,17 @@ class _HomeTab extends StatelessWidget {
   }
 
   Widget _buildTopicsGrid() {
+    const topics = [
+      (Icons.calculate_outlined, 'Math'),
+      (Icons.code_rounded, 'Coding'),
+      (Icons.language_rounded, 'Language'),
+      (Icons.music_note_rounded, 'Music'),
+      (Icons.science_outlined, 'Science'),
+      (Icons.brush_rounded, 'Art'),
+      (Icons.history_edu_rounded, 'History'),
+      (Icons.fitness_center_rounded, 'PE'),
+    ];
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -225,13 +241,42 @@ class _HomeTab extends StatelessWidget {
           const Text('Topic', style: TextStyle(color: Color(0xFF1A237E), fontSize: 10)),
         ],
       ),
+      itemCount: topics.length,
+      itemBuilder: (_, i) {
+        final (icon, label) = topics[i];
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+                ],
+              ),
+              child: Icon(icon, color: AppColors.primary, size: 22),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: AppColors.background,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildTutorList(BuildContext context) {
     final teachers = DummyData.teachers;
     return SizedBox(
-      height: 160,
+      height: 170,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
@@ -240,7 +285,7 @@ class _HomeTab extends StatelessWidget {
           final teacher = teachers[i];
           final expertise = teacher.expertise.isNotEmpty ? teacher.expertise.first : '';
           return Container(
-            width: 140,
+            width: 130,
             margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -251,7 +296,11 @@ class _HomeTab extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const CircleAvatar(radius: 25, child: Icon(Icons.person)),
+                CircleAvatar(
+                  radius: 26,
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  child: const Icon(Icons.person_rounded, color: AppColors.primary),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   teacher.user.name,
