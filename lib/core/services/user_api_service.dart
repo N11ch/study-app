@@ -67,7 +67,7 @@ class UserApiService {
 
     try {
       final response = await http.patch(
-        Uri.parse('${AppConfig.API_URL}/user/update/profile'),
+        Uri.parse('${AppConfig.apiUrl}/user/update/profile'),
         headers: AuthState.instance.authHeaders,
         body: jsonEncode(body),
       );

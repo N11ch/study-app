@@ -18,13 +18,8 @@ class UpdateProfileScreen extends StatefulWidget {
 class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  /// UI + persisted for unused API path
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController dobController = TextEditingController();
-
-  /// Retained only for unused `_updateProfile` API code (not shown in UI).
-  final _usernameController = TextEditingController();
-  final _bioController = TextEditingController();
 
   String selectedRole = 'student';
 
@@ -46,75 +41,56 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
     }
   }
 
-  // MOCK MODE: Toggle via AppConfig.USE_MOCK
-  // ignore: unused_element — preserved for backend; UI uses [_submitCompleteIdentity].
-  Future<void> _updateProfile() async {
+  Future<void> _submitCompleteIdentity() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
-    if (!AppConfig.USE_MOCK) {
-      final apiRole = selectedRole == 'tutor' ? 'TUTOR' : 'STUDENT';
+    final apiRole = selectedRole == 'tutor' ? 'TUTOR' : 'STUDENT';
+
+    if (AppConfig.useMock) {
+      // Mock mode: update AuthState locally and navigate
+      AuthState.instance
+        ..fullName = fullNameController.text.trim()
+        ..role = apiRole;
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nice! Your profile has been updated.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
       final result = await UserApiService.instance.updateProfile(
-        username: _usernameController.text.trim(),
         fullName: fullNameController.text.trim(),
-        bio: _bioController.text.trim(),
         role: apiRole,
       );
-
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      if (result.success) {
-        // Sync role into AuthState so the rest of the app sees the updated role
-        AuthState.instance.role = result.user?['role']?.toString();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Nice! Your profile has been updated."),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        final role = result.user?['role']?.toString();
-        if (role == 'TUTOR') {
-          Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
-        } else {
-          Navigator.of(context).pushReplacementNamed('/student-dashboard');
-        }
-      } else {
+      if (!result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result.errorMessage ?? 'Something went wrong.'),
             backgroundColor: Colors.redAccent,
           ),
         );
+        return;
       }
-    } else {
-      await Future.delayed(const Duration(seconds: 1));
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+
+      // Sync updated role back into AuthState
+      AuthState.instance.role = result.user?['role']?.toString() ?? apiRole;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nice! Your profile has been updated. (Mock)'),
+          content: Text('Nice! Your profile has been updated.'),
           backgroundColor: Colors.green,
         ),
       );
-      if (selectedRole == 'tutor') {
-        Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
-      } else {
-        Navigator.of(context).pushReplacementNamed('/student-dashboard');
-      }
     }
-  }
 
-  Future<void> _submitCompleteIdentity() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
-    setState(() => _isLoading = false);
     if (selectedRole == 'tutor') {
       Navigator.of(context).pushReplacementNamed('/teacher-dashboard');
     } else {
@@ -185,8 +161,6 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   void dispose() {
     fullNameController.dispose();
     dobController.dispose();
-    _usernameController.dispose();
-    _bioController.dispose();
     super.dispose();
   }
 

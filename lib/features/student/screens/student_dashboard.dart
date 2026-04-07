@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/services/auth_state.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/inputs/search_input.dart';
 import '../../../core/widgets/common/empty_state.dart';
-import '../../../core/widgets/buttons/primary_button.dart';
 import '../../../data/dummy_data.dart';
 
 class StudentDashboard extends StatefulWidget {
@@ -18,28 +18,38 @@ class StudentDashboard extends StatefulWidget {
 class _StudentDashboardState extends State<StudentDashboard> {
   int _currentIndex = 0;
 
+  static const _gradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xFF1565C0), Color(0xFFD6E8FF)],
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-        // Tab Switcher
-        child: IndexedStack(
-          index: _currentIndex,
-          children: const [
-            HomeTab(),
-            Center(child: Text(AppStrings.schedule, style: TextStyle(color: Colors.white))),
-            Center(child: Text(AppStrings.myLearning, style: TextStyle(color: Colors.white))),
-            Center(child: Text(AppStrings.profile, style: TextStyle(color: Colors.white))),
-          ],
-        ),
+      body: Stack(
+        children: [
+          // Background gradient — guaranteed to fill the entire screen
+          Positioned.fill(
+            child: DecoratedBox(decoration: const BoxDecoration(gradient: _gradient)),
+          ),
+          // Tab content
+          IndexedStack(
+            index: _currentIndex,
+            children: const [
+              _HomeTab(),
+              Center(child: Text(AppStrings.schedule, style: TextStyle(color: Colors.white))),
+              Center(child: Text(AppStrings.myLearning, style: TextStyle(color: Colors.white))),
+              Center(child: Text(AppStrings.profile, style: TextStyle(color: Colors.white))),
+            ],
+          ),
+        ],
       ),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
 
-  // Floating Navigation Bar
   Widget _buildBottomNav() {
     return Container(
       height: 64,
@@ -47,7 +57,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(100),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20, offset: const Offset(0, 10))],
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, 10))],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -61,59 +71,73 @@ class _StudentDashboardState extends State<StudentDashboard> {
     );
   }
 
-  // Nav Item Widget
   Widget _buildNavItem(int index, IconData icon, String label) {
-    bool isSelected = _currentIndex == index;
+    final isSelected = _currentIndex == index;
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = index),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: isSelected ? AppColors.primary : AppColors.textDisabled),
-          if (!isSelected) Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textDisabled)),
+          if (!isSelected)
+            Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textDisabled)),
         ],
       ),
     );
   }
 }
 
-class HomeTab extends StatelessWidget {
-  const HomeTab({super.key});
+class _HomeTab extends StatelessWidget {
+  const _HomeTab();
 
   @override
   Widget build(BuildContext context) {
-    if (DummyData.teachers.isEmpty) return const EmptyState(message: "No tutors available");
+    if (DummyData.teachers.isEmpty) {
+      return const EmptyState(message: 'No tutors available');
+    }
 
     return ListView(
       padding: EdgeInsets.zero,
       children: [
         _buildHeader(context),
-        _buildSectionLabel(context, 'Search Tutor by Topic >'),
+        _buildSectionLabel('Search Tutor by Topic >'),
         _buildTopicsGrid(),
-        _buildSectionLabel(context, 'Top Rated Tutor >'),
+        _buildSectionLabel('Top Rated Tutor >'),
         _buildTutorList(context),
         const SizedBox(height: 110),
       ],
     );
   }
 
-  // Header & Search Section
   Widget _buildHeader(BuildContext context) {
+    final displayName = AuthState.instance.displayName;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(AppSizes.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Good Morning,', style: AppTypography.subtitle(context).copyWith(color: Colors.white70)),
-            Text('Muh Daffa Dwi S.', style: AppTypography.headline(context).copyWith(color: Colors.white)),
+            Text(
+              'Good Morning,',
+              style: AppTypography.subtitle(context).copyWith(color: Colors.white70),
+            ),
+            Text(
+              displayName,
+              style: AppTypography.headline(context).copyWith(color: Colors.white),
+            ),
             const SizedBox(height: AppSizes.lg),
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(32)),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black12, blurRadius: 16, offset: Offset(0, 8)),
+                ],
+              ),
               child: Column(
                 children: [
-                  const SearchInput(hint: "Search tutor..."),
+                  const SearchInput(hint: 'Search tutor...'),
                   const Divider(height: 32),
                   _buildUpcomingDetail(context),
                 ],
@@ -125,7 +149,6 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  // Upcoming Session Info
   Widget _buildUpcomingDetail(BuildContext context) {
     return Row(
       children: [
@@ -133,66 +156,110 @@ class HomeTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Upcoming Session', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary)),
-              Text('Dr. Amba Rusdi, S.Kom.', style: AppTypography.title(context).copyWith(fontSize: 14)),
+              const Text(
+                'Upcoming Session',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary),
+              ),
+              Text(
+                'Dr. Amba Rusdi, S.Kom.',
+                style: AppTypography.title(context).copyWith(fontSize: 14),
+              ),
             ],
           ),
         ),
-        PrimaryButton(text: 'Join', onPressed: () {}, size: ButtonSize.small),
+        // Constrained Join button — avoids PrimaryButton's full-width SizedBox
+        SizedBox(
+          width: 64,
+          height: 36,
+          child: ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Join', style: TextStyle(fontSize: 13)),
+          ),
+        ),
       ],
     );
   }
 
-  // Section Title Label
-  Widget _buildSectionLabel(BuildContext context, String text) {
+  Widget _buildSectionLabel(String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: 8),
-      child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF1A237E), // dark navy — readable on the light-blue lower gradient
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
-  // Grid Categories
   Widget _buildTopicsGrid() {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, mainAxisSpacing: 10),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 10,
+      ),
       itemCount: 8,
       itemBuilder: (context, i) => Column(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(16)),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)],
+            ),
             child: const Icon(Icons.book, color: AppColors.primary),
           ),
-          const Text('Topic', style: TextStyle(color: Colors.white, fontSize: 10)),
+          const SizedBox(height: 4),
+          const Text('Topic', style: TextStyle(color: Color(0xFF1A237E), fontSize: 10)),
         ],
       ),
     );
   }
 
-  // Horizontal Tutor List
   Widget _buildTutorList(BuildContext context) {
+    final teachers = DummyData.teachers;
     return SizedBox(
       height: 160,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
-        itemCount: DummyData.teachers.length,
+        itemCount: teachers.length,
         itemBuilder: (context, i) {
-          final teacher = DummyData.teachers[i];
+          final teacher = teachers[i];
+          final expertise = teacher.expertise.isNotEmpty ? teacher.expertise.first : '';
           return Container(
             width: 140,
             margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(24)),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))],
+            ),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const CircleAvatar(radius: 25, child: Icon(Icons.person)),
                 const SizedBox(height: 8),
-                Text(teacher.user.name, maxLines: 1, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                Text(teacher.expertise.first, style: const TextStyle(fontSize: 10)),
+                Text(
+                  teacher.user.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                Text(expertise, style: const TextStyle(fontSize: 10, color: AppColors.textDisabled)),
               ],
             ),
           );

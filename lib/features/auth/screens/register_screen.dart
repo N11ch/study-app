@@ -1,13 +1,9 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:http/http.dart' as http;
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
-import '../../../core/constants/app_config.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/services/auth_state.dart';
+import '../../../core/services/auth_service.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 import '../../../core/widgets/inputs/text_input.dart';
 import '../../../core/widgets/inputs/password_text_field.dart';
@@ -37,85 +33,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // MOCK MODE: Toggle via AppConfig.USE_MOCK
-  // REGISTER DARI BIASA METHOD
   Future<void> _register() async {
     if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content:
-              Text('Please agree to the Terms of Service and Privacy Policy'),
+          content: Text('Please agree to the Terms of Service and Privacy Policy'),
         ),
       );
       return;
     }
+    if (!_formKey.currentState!.validate()) return;
 
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+    setState(() => _isLoading = true);
+    final result = await AuthService.instance.register(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
+    if (!mounted) return;
+    setState(() => _isLoading = false);
 
-      try {
-        if (!AppConfig.USE_MOCK) {
-          final response = await http.post(
-            Uri.parse('${AppConfig.API_URL}/auth/signup'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'email': _emailController.text.trim(),
-              'password': _passwordController.text,
-            }),
-          );
-
-          if (!mounted) return;
-          final responseData =
-              jsonDecode(response.body) as Map<String, dynamic>;
-
-          if (response.statusCode == 200 || response.statusCode == 201) {
-            AuthState.instance.setFromResponse(responseData);
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Account created successfully!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-
-            Navigator.of(context).pushReplacementNamed('/update-profile');
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(responseData['message'] ??
-                    'Registration failed, try again later'),
-                backgroundColor: Colors.redAccent,
-              ),
-            );
-          }
-        } else {
-          await Future.delayed(const Duration(seconds: 1));
-          if (!mounted) return;
-          if (mounted) setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account created successfully! (Mock)'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.of(context).pushReplacementNamed('/update-profile');
-        }
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Something went wrong. Please try again later.'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
-      }
-      // Future.delayed(const Duration(seconds: 1), () {
-      //   if (!mounted) return;
-      //   setState(() => _isLoading = false);
-      //   Navigator.of(context).pushReplacementNamed('/login');
-      // });
+    if (result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account created successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.of(context).pushReplacementNamed('/update-profile');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.errorMessage!),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
