@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_sizes.dart';
-import '../widgets/dashboard/teacher_courses_tab.dart';
-import '../widgets/dashboard/teacher_earnings_tab.dart';
+import '../../../core/constants/app_animations.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_strings.dart';
 import '../widgets/dashboard/teacher_home_tab.dart';
+import '../widgets/dashboard/teacher_courses_tab.dart';
+import '../widgets/dashboard/teacher_message_tab.dart';
 import '../widgets/dashboard/teacher_profile_tab.dart';
-import '../widgets/dashboard/teacher_students_tab.dart';
+import '../widgets/dashboard/teacher_schedule_tab.dart';
 
 class TeacherDashboard extends StatefulWidget {
   const TeacherDashboard({super.key});
@@ -19,13 +21,14 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(
         index: _currentIndex,
         children: const [
           TeacherHomeTab(),
           TeacherCoursesTab(),
-          TeacherStudentsTab(),
-          TeacherEarningsTab(),
+          TeacherScheduleTab(),
+          TeacherMessageTab(),
           TeacherProfileTab(),
         ],
       ),
@@ -34,54 +37,65 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   }
 
   Widget _buildBottomNav() {
-    final colorScheme = Theme.of(context).colorScheme;
     return Container(
+      height: 68,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 28), // Reduced margins for 5 items spacing
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        boxShadow: [
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(100),
+        boxShadow: const [
           BoxShadow(
-            color: colorScheme.shadow.withAlpha(13),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
+              color: Colors.black12, blurRadius: 20, offset: Offset(0, 10)),
         ],
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSizes.sm),
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) => setState(() => _currentIndex = index),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home_rounded),
-                label: 'Home',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _navItem(0, Icons.home_rounded, AppStrings.home),
+          _navItem(1, Icons.menu_book_rounded, 'Offers'),
+          _navItem(2, Icons.calendar_today_rounded, AppStrings.schedule),
+          _navItem(3, Icons.chat_bubble_rounded, AppStrings.messages),
+          _navItem(4, Icons.person_rounded, AppStrings.profile),
+        ],
+      ),
+    );
+  }
+
+  Widget _navItem(int index, IconData icon, String label) {
+    final isSelected = _currentIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: AppAnimations.navItem,
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.primary.withOpacity(0.12)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.book_outlined),
-                activeIcon: Icon(Icons.book_rounded),
-                label: 'Courses',
+              child: Icon(
+                icon,
+                size: 22,
+                color: isSelected ? AppColors.primary : AppColors.textDisabled,
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.people_outline),
-                activeIcon: Icon(Icons.people_rounded),
-                label: 'Students',
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? AppColors.primary : AppColors.textDisabled,
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.account_balance_wallet_outlined),
-                activeIcon: Icon(Icons.account_balance_wallet_rounded),
-                label: 'Earnings',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person_rounded),
-                label: 'Profile',
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

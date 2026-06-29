@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
+import '../common/avatar_widget.dart';
 import '../common/loading_widget.dart';
 import '../../../models/tutor_profile.dart';
 
@@ -31,10 +32,10 @@ class TutorCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              child: const Icon(Icons.person_rounded, color: AppColors.primary, size: 28),
+            AvatarWidget(
+              imageUrl: tutor.avatarUrl,
+              name: tutor.displayName,
+              size: AvatarSize.medium,
             ),
             const SizedBox(height: 8),
             Text(

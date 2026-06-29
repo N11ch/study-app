@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/auth_state.dart';
+import 'teacher_courses_tab.dart';
+import 'teacher_earnings_tab.dart';
 
 class TeacherProfileTab extends StatelessWidget {
   const TeacherProfileTab({super.key});
@@ -28,49 +30,27 @@ class TeacherProfileTab extends StatelessWidget {
           children: [
             const _TeacherProfileHeader(),
             const SizedBox(height: 24),
-            _buildSectionCard(
+             _buildSectionCard(
               children: [
                 _ProfileMenuItem(
                   icon: Icons.person_outline_rounded,
                   label: 'Edit Profile',
-                  onTap: () {},
+                  onTap: () => Navigator.of(context).pushNamed('/update-profile'),
                 ),
                 _ProfileMenuItem(
-                  icon: Icons.lock_outline_rounded,
-                  label: 'Change Password',
-                  disabled: true,
-                  onTap: () {},
+                  icon: Icons.book_outlined,
+                  label: 'My Offers',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const TeacherCoursesTab()),
+                  ),
                 ),
                 _ProfileMenuItem(
-                  icon: Icons.notifications_none_rounded,
-                  label: 'Notifications',
-                  disabled: true,
-                  showDivider: false, 
-                  onTap: () {},
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildSectionCard(
-              children: [
-                _ProfileMenuItem(
-                  icon: Icons.help_outline_rounded,
-                  label: 'Help & Support',
-                  disabled: true,
-                  onTap: () {},
-                ),
-                _ProfileMenuItem(
-                  icon: Icons.privacy_tip_outlined,
-                  label: 'Privacy Policy',
-                  disabled: true,
-                  onTap: () {},
-                ),
-                _ProfileMenuItem(
-                  icon: Icons.info_outline_rounded,
-                  label: 'About',
-                  disabled: true,
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: 'Earnings',
                   showDivider: false,
-                  onTap: () {},
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const TeacherEarningsTab()),
+                  ),
                 ),
               ],
             ),

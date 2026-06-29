@@ -112,7 +112,7 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
               ),
             ),
             const SizedBox(height: AppSizes.xl),
-            _ProfileMenuItem(
+             _ProfileMenuItem(
               icon: Icons.person_outline_rounded,
               label: 'Edit Profile',
               onTap: () =>
@@ -124,17 +124,15 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
               onTap: () => Navigator.of(context)
                   .pushNamed('/coin-purchase'),
             ),
-            _ProfileMenuItem(
-              icon: Icons.help_outline_rounded,
-              label: 'Help & Support',
-              onTap: () {},
-            ),
             const SizedBox(height: AppSizes.md),
             _ProfileMenuItem(
               icon: Icons.logout_rounded,
               label: 'Log Out',
-              onTap: () => Navigator.of(context)
-                  .pushReplacementNamed('/login'),
+              onTap: () {
+                AuthState.instance.clear();
+                Navigator.of(context)
+                    .pushReplacementNamed('/login');
+              },
               isDestructive: true,
             ),
           ],

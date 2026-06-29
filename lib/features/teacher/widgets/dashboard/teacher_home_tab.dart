@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/services/auth_state.dart';
 import '../../../../core/services/booking_api_service.dart';
+import '../../../../core/services/tutor_api_service.dart';
+import '../../../../core/services/user_api_service.dart';
+import 'teacher_courses_tab.dart';
 
 class TeacherHomeTab extends StatefulWidget {
   const TeacherHomeTab({super.key});
@@ -14,11 +18,7 @@ class _TeacherHomeTabState extends State<TeacherHomeTab> {
   String? _error;
   List<Map<String, dynamic>> _bookings = [];
 
-  static const _activities = [
-    {'type': 'enrollment', 'message': 'New booking received', 'time': 'Just now'},
-    {'type': 'review', 'message': 'Check your latest reviews', 'time': 'Today'},
-    {'type': 'message', 'message': 'You have new messages', 'time': 'Today'},
-  ];
+
 
   @override
   void initState() {
@@ -43,39 +43,251 @@ class _TeacherHomeTabState extends State<TeacherHomeTab> {
     });
   }
 
+  Future<void> _handleConfirm(String bookingId) async {
+    setState(() => _loading = true);
+    final res = await BookingApiService.instance.confirmBooking(bookingId);
+    if (!mounted) return;
+    if (res.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Booking confirmed successfully!'), backgroundColor: Color(0xFF10B981)),
+      );
+      _loadData();
+    } else {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res.errorMessage ?? 'Failed to confirm booking.')),
+      );
+    }
+  }
+
+  Future<void> _handleDecline(String bookingId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Decline Booking?'),
+        content: const Text('Are you sure you want to decline this booking request? The student will be refunded.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes, Decline')),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _loading = true);
+      final res = await BookingApiService.instance.declineBooking(bookingId);
+      if (!mounted) return;
+      if (res.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Booking declined successfully.'), backgroundColor: Color(0xFFEF4444)),
+        );
+        _loadData();
+      } else {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res.errorMessage ?? 'Failed to decline booking.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleJoin(String bookingId) async {
+    final result = await UserApiService.instance.getJoinInfo(bookingId);
+    if (!mounted) return;
+    if (result.success && result.meetingUrl != null) {
+      final uri = Uri.parse(result.meetingUrl!);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open meeting URL')));
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.errorMessage ?? 'Cannot join session yet')));
+    }
+  }
+
+  void _showCreateOfferDialog() {
+    final titleController = TextEditingController();
+    final summaryController = TextEditingController();
+    final coinsController = TextEditingController();
+    final durationController = TextEditingController(text: '60');
+    bool isCreating = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
+              ),
+            ),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              left: 24,
+              right: 24,
+              top: 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Create New Session Offer',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(
+                      labelText: 'Offer Title',
+                      hintText: 'e.g., Master Flutter Basics',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: summaryController,
+                    decoration: InputDecoration(
+                      labelText: 'Summary / Description',
+                      hintText: 'Brief explanation of what you will cover',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: coinsController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Coins Per Hour',
+                            hintText: 'e.g., 150',
+                            prefixIcon: const Icon(Icons.toll_rounded, color: Colors.amber),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: durationController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Duration (Minutes)',
+                            hintText: 'e.g., 60',
+                            prefixIcon: const Icon(Icons.timer_outlined),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: isCreating
+                        ? null
+                        : () async {
+                            final title = titleController.text.trim();
+                            final coinsText = coinsController.text.trim();
+                            final durationText = durationController.text.trim();
+
+                            if (title.isEmpty || coinsText.isEmpty || durationText.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please fill in all fields.')),
+                              );
+                              return;
+                            }
+
+                            final coins = int.tryParse(coinsText);
+                            final duration = int.tryParse(durationText);
+                            if (coins == null || coins <= 0 || duration == null || duration <= 0) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter valid numbers.')),
+                              );
+                              return;
+                            }
+
+                            setModalState(() => isCreating = true);
+                            final res = await TutorApiService.instance.createOffer(
+                              title: title,
+                              summary: summaryController.text.trim(),
+                              coinsPerHour: coins,
+                              durationMinutes: duration,
+                            );
+
+                            if (context.mounted) {
+                              setModalState(() => isCreating = false);
+                              if (res.success) {
+                                final messenger = ScaffoldMessenger.of(context);
+                                Navigator.pop(context);
+                                _loadData();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const TeacherCoursesTab()),
+                                );
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Session offer created successfully!'),
+                                    backgroundColor: Color(0xFF10B981),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(res.errorMessage ?? 'Failed to create offer.')),
+                                );
+                              }
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: isCreating
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Text('Create Offer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final name = AuthState.instance.displayName;
-    final coinsBalance = AuthState.instance.coinsBalance;
-
-    final stats = [
-      {
-        'title': 'Active Sessions',
-        'value': '${_bookings.length}',
-        'icon': Icons.menu_book_rounded,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'title': 'Coin Balance',
-        'value': '$coinsBalance',
-        'icon': Icons.account_balance_wallet_rounded,
-        'color': const Color(0xFF6366F1),
-      },
-      {
-        'title': 'Total Students',
-        'value': '—',
-        'icon': Icons.people_rounded,
-        'color': const Color(0xFF3B82F6),
-      },
-      {
-        'title': 'Average Rating',
-        'value': '—',
-        'icon': Icons.star_rounded,
-        'color': const Color(0xFFF59E0B),
-      },
-    ];
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -99,15 +311,11 @@ class _TeacherHomeTabState extends State<TeacherHomeTab> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(name),
-                  const SizedBox(height: 24),
-                  _buildQuickStats(stats),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 20),
+                  _buildCreateOfferBanner(),
+                  const SizedBox(height: 28),
                   _buildUpcomingSessions(),
-                  const SizedBox(height: 32),
-                  _buildRecentActivity(),
-                  const SizedBox(height: 32),
-                  _buildQuickActions(),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 120),
                 ],
               ),
             ),
@@ -149,11 +357,38 @@ class _TeacherHomeTabState extends State<TeacherHomeTab> {
               ],
             ),
           ),
-          Stack(
+          Row(
             children: [
+              ListenableBuilder(
+                listenable: AuthState.instance,
+                builder: (context, _) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.toll_rounded, color: Colors.amber, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${AuthState.instance.coinsBalance}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
               Container(
-                width: 52,
-                height: 52,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white.withOpacity(0.2),
@@ -165,23 +400,10 @@ class _TeacherHomeTabState extends State<TeacherHomeTab> {
                           AuthState.instance.avatarUrl!,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) =>
-                              const Icon(Icons.person_rounded, color: Colors.white, size: 32),
+                              const Icon(Icons.person_rounded, color: Colors.white, size: 24),
                         ),
                       )
-                    : const Icon(Icons.person_rounded, color: Colors.white, size: 32),
-              ),
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF3B82F6), width: 2),
-                  ),
-                ),
+                    : const Icon(Icons.person_rounded, color: Colors.white, size: 24),
               ),
             ],
           ),
@@ -190,64 +412,71 @@ class _TeacherHomeTabState extends State<TeacherHomeTab> {
     );
   }
 
-  Widget _buildQuickStats(List<Map<String, dynamic>> stats) {
-    return SizedBox(
-      height: 140,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: stats.length,
-        itemBuilder: (context, index) {
-          final s = stats[index];
-          return Container(
-            width: 150,
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+  Widget _buildCreateOfferBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1E40AF).withOpacity(0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: (s['color'] as Color).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Ready to tutor?',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  child: Icon(s['icon'] as IconData, color: s['color'] as Color, size: 20),
-                ),
-                const Spacer(),
-                Text(
-                  s['value'] as String,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Create a new session offer to start receiving bookings!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  s['title'] as String,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey.shade500,
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _showCreateOfferDialog,
+                    icon: const Icon(Icons.add_rounded, color: Color(0xFF1E40AF), size: 18),
+                    label: const Text(
+                      'Create Offer',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E40AF)),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          );
-        },
+            const SizedBox(width: 16),
+            const Icon(Icons.menu_book_rounded, color: Colors.white24, size: 72),
+          ],
+        ),
       ),
     );
   }
@@ -321,6 +550,7 @@ class _TeacherHomeTabState extends State<TeacherHomeTab> {
         : startAt;
 
     return _buildSessionCard({
+      'id': booking['id'],
       'title': title,
       'time': timeLabel,
       'students': 1,
@@ -329,7 +559,10 @@ class _TeacherHomeTabState extends State<TeacherHomeTab> {
   }
 
   Widget _buildSessionCard(Map<String, dynamic> session) {
-    final isImmediate = session['status'] == 'PENDING';
+    final status = (session['status']?.toString() ?? '').toUpperCase();
+    final isPending = status == 'PENDING';
+    final isConfirmed = status == 'CONFIRMED';
+    final String bookingId = session['id']?.toString() ?? '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12, left: 24, right: 24),
@@ -345,229 +578,120 @@ class _TeacherHomeTabState extends State<TeacherHomeTab> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0E7FF),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.videocam_rounded, color: Color(0xFF4F46E5)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  session['title'] as String,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E293B),
-                  ),
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0E7FF),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 6),
-                Row(
+                child: const Icon(Icons.videocam_rounded, color: Color(0xFF4F46E5)),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.schedule_rounded, size: 14, color: Colors.grey.shade500),
-                    const SizedBox(width: 4),
                     Text(
-                      session['time'] as String,
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      session['title'] as String,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.schedule_rounded, size: 14, color: Colors.grey.shade500),
+                        const SizedBox(width: 4),
+                        Text(
+                          session['time'] as String,
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: isImmediate ? const Color(0xFFFEF2F2) : const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              session['status'] as String,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: isImmediate ? const Color(0xFFEF4444) : Colors.grey.shade600,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentActivity() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            'Recent Activity',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        ..._activities.map((a) => _buildActivityCard(a)),
-      ],
-    );
-  }
-
-  Widget _buildActivityCard(Map<String, dynamic> activity) {
-    IconData icon;
-    Color color;
-
-    switch (activity['type']) {
-      case 'enrollment':
-        icon = Icons.person_add_rounded;
-        color = const Color(0xFF10B981);
-        break;
-      case 'review':
-        icon = Icons.star_rounded;
-        color = const Color(0xFFF59E0B);
-        break;
-      case 'message':
-      default:
-        icon = Icons.chat_bubble_rounded;
-        color = const Color(0xFF3B82F6);
-        break;
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12, left: 24, right: 24),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  activity['message'] as String,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF1E293B),
-                  ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isPending 
+                      ? const Color(0xFFFEF2F2) 
+                      : isConfirmed 
+                          ? const Color(0xFFD1FAE5) 
+                          : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  activity['time'] as String,
+                child: Text(
+                  status,
                   style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isPending 
+                        ? const Color(0xFFEF4444) 
+                        : isConfirmed 
+                            ? const Color(0xFF10B981) 
+                            : Colors.grey.shade600,
                   ),
                 ),
+              ),
+            ],
+          ),
+          if (isPending || isConfirmed) ...[
+            const Divider(height: 20, thickness: 1),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (isPending) ...[
+                  TextButton(
+                    onPressed: () => _handleDecline(bookingId),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFEF4444),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Decline', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () => _handleConfirm(bookingId),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Confirm', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
+                ] else if (isConfirmed) ...[
+                  ElevatedButton.icon(
+                    onPressed: () => _handleJoin(bookingId),
+                    icon: const Icon(Icons.videocam_rounded, size: 16),
+                    label: const Text('Join Class', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3B82F6),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ],
               ],
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildQuickActions() {
-    final actions = [
-      {'icon': Icons.add_circle_rounded, 'label': 'Create', 'color': const Color(0xFF3B82F6)},
-      {'icon': Icons.schedule_rounded, 'label': 'Schedule', 'color': const Color(0xFF10B981)},
-      {'icon': Icons.analytics_rounded, 'label': 'Analytics', 'color': const Color(0xFF6366F1)},
-      {'icon': Icons.help_rounded, 'label': 'Support', 'color': Colors.grey.shade600},
-    ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            'Quick Actions',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: actions.map((action) => _buildActionButton(action)).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton(Map<String, dynamic> action) {
-    return GestureDetector(
-      onTap: () {},
-      child: Column(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Icon(
-              action['icon'] as IconData,
-              color: action['color'] as Color,
-              size: 26,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            action['label'] as String,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF64748B),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

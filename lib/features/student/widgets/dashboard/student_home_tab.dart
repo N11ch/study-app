@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/services/auth_state.dart';
@@ -104,6 +105,25 @@ class _StudentHomeTabState extends State<StudentHomeTab> {
   Future<void> _loadNotifCount() async {
     final count = await StudentProfileService.instance.getUnseenCount();
     if (mounted) setState(() => _unseenNotifs = count);
+  }
+
+  Future<void> _handleJoin(Booking booking) async {
+    final result = await UserApiService.instance.getJoinInfo(booking.id);
+    if (!mounted) return;
+    if (result.success && result.meetingUrl != null) {
+      final uri = Uri.parse(result.meetingUrl!);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open meeting URL')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.errorMessage ?? 'Cannot join session yet')),
+      );
+    }
   }
 
   Future<void> _refreshProfile() async {
@@ -385,7 +405,7 @@ class _StudentHomeTabState extends State<StudentHomeTab> {
           child: ElevatedButton(
             onPressed: () {
               if (hasSession) {
-                // Navigate to schedule or call
+                _handleJoin(_nextSession!);
               } else {
                 _loadAll();
               }

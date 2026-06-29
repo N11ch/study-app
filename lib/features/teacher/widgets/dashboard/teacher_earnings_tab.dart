@@ -51,6 +51,149 @@ class _TeacherEarningsTabState extends State<TeacherEarningsTab> {
     });
   }
 
+  void _showWithdrawDialog() {
+    final amountController = TextEditingController(text: _balance.toString());
+    final accountNameController = TextEditingController();
+    final accountNumberController = TextEditingController();
+    final bankNameController = TextEditingController(text: 'BCA');
+    String paymentMethod = 'Bank Transfer';
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Request Withdrawal'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: amountController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Coins Amount',
+                    prefixIcon: Icon(Icons.toll_rounded, color: Colors.amber),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: paymentMethod,
+                  decoration: const InputDecoration(labelText: 'Payment Method'),
+                  items: const [
+                    DropdownMenuItem(value: 'Bank Transfer', child: Text('Bank Transfer')),
+                    DropdownMenuItem(value: 'E-Wallet', child: Text('E-Wallet')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setDialogState(() {
+                        paymentMethod = val;
+                        if (val == 'E-Wallet') {
+                          bankNameController.text = 'GOPAY';
+                        } else {
+                          bankNameController.text = 'BCA';
+                        }
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: bankNameController,
+                  decoration: InputDecoration(
+                    labelText: paymentMethod == 'Bank Transfer' ? 'Bank Name' : 'E-Wallet Provider',
+                    hintText: paymentMethod == 'Bank Transfer' ? 'e.g., BCA, Mandiri' : 'e.g., GOPAY, OVO',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: accountNumberController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Account / Phone Number',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: accountNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Account Holder Name',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final amountText = amountController.text.trim();
+                      final accountName = accountNameController.text.trim();
+                      final accountNumber = accountNumberController.text.trim();
+                      final bankName = bankNameController.text.trim();
+
+                      if (amountText.isEmpty || accountName.isEmpty || accountNumber.isEmpty || bankName.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please fill in all fields.')),
+                        );
+                        return;
+                      }
+
+                      final amount = int.tryParse(amountText);
+                      if (amount == null || amount <= 0 || amount > _balance) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter a valid amount within your balance.')),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isSubmitting = true);
+                      final res = await TutorApiService.instance.requestWithdrawal(
+                        coinsAmount: amount,
+                        accountName: accountName,
+                        accountNumber: accountNumber,
+                        paymentMethod: paymentMethod,
+                        bankName: bankName,
+                      );
+
+                      if (context.mounted) {
+                        setDialogState(() => isSubmitting = false);
+                        if (res.success) {
+                          Navigator.pop(context);
+                          _loadData();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Withdrawal request submitted successfully!'),
+                              backgroundColor: Color(0xFF10B981),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(res.errorMessage ?? 'Failed to submit request.')),
+                          );
+                        }
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   int get _thisMonthEarned {
     final now = DateTime.now();
     return _history
@@ -103,36 +246,60 @@ class _TeacherEarningsTabState extends State<TeacherEarningsTab> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF3B82F6),
-            Color(0xFF93C5FD),
-            Color(0xFFFFFFFF),
-          ],
-          stops: [0.0, 0.4, 1.0],
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF3B82F6),
+              Color(0xFF93C5FD),
+              Color(0xFFFFFFFF),
+            ],
+            stops: [0.0, 0.4, 1.0],
+          ),
         ),
-      ),
-      child: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadData,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(AppSizes.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Earnings',
-                  style: textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+        child: SafeArea(
+          bottom: false,
+          child: RefreshIndicator(
+            onRefresh: _loadData,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                AppSizes.md,
+                AppSizes.md,
+                AppSizes.md,
+                100.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Earnings',
+                        style: textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: AppSizes.lg),
+                  const SizedBox(height: AppSizes.lg),
                 Container(
                   padding: const EdgeInsets.all(AppSizes.lg),
                   decoration: BoxDecoration(
@@ -161,12 +328,26 @@ class _TeacherEarningsTabState extends State<TeacherEarningsTab> {
                               style: textTheme.bodyMedium?.copyWith(color: Colors.white70),
                             ),
                             const SizedBox(height: AppSizes.xs),
-                            Text(
-                              '$_balance coins',
-                              style: textTheme.displaySmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
+                             Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '$_balance coins',
+                                  style: textTheme.displaySmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: _balance > 0 ? _showWithdrawDialog : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: const Color(0xFF1E40AF),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  child: const Text('Withdraw', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: AppSizes.lg),
                             Row(
@@ -229,6 +410,7 @@ class _TeacherEarningsTabState extends State<TeacherEarningsTab> {
           ),
         ),
       ),
+    ),
     );
   }
 

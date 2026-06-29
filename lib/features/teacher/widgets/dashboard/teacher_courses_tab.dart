@@ -70,9 +70,183 @@ class _TeacherCoursesTabState extends State<TeacherCoursesTab> {
     }
   }
 
+  void _showCreateOfferDialog() {
+    final titleController = TextEditingController();
+    final summaryController = TextEditingController();
+    final coinsController = TextEditingController();
+    final durationController = TextEditingController(text: '60');
+    bool isCreating = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
+              ),
+            ),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              left: 24,
+              right: 24,
+              top: 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Create New Session Offer',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(
+                      labelText: 'Offer Title',
+                      hintText: 'e.g., Master Flutter Basics',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: summaryController,
+                    decoration: InputDecoration(
+                      labelText: 'Summary / Description',
+                      hintText: 'Brief explanation of what you will cover',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: coinsController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Coins Per Hour',
+                            hintText: 'e.g., 150',
+                            prefixIcon: const Icon(Icons.toll_rounded, color: Colors.amber),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: durationController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Duration (Minutes)',
+                            hintText: 'e.g., 60',
+                            prefixIcon: const Icon(Icons.timer_outlined),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: isCreating
+                        ? null
+                        : () async {
+                            final title = titleController.text.trim();
+                            final coinsText = coinsController.text.trim();
+                            final durationText = durationController.text.trim();
+
+                            if (title.isEmpty || coinsText.isEmpty || durationText.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please fill in all fields.')),
+                              );
+                              return;
+                            }
+
+                            final coins = int.tryParse(coinsText);
+                            final duration = int.tryParse(durationText);
+                            if (coins == null || coins <= 0 || duration == null || duration <= 0) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter valid numbers.')),
+                              );
+                              return;
+                            }
+
+                            setModalState(() => isCreating = true);
+                            final res = await TutorApiService.instance.createOffer(
+                              title: title,
+                              summary: summaryController.text.trim(),
+                              coinsPerHour: coins,
+                              durationMinutes: duration,
+                            );
+
+                            if (context.mounted) {
+                              setModalState(() => isCreating = false);
+                              if (res.success) {
+                                final messenger = ScaffoldMessenger.of(context);
+                                Navigator.pop(context);
+                                _loadOffers();
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Session offer created successfully!'),
+                                    backgroundColor: Color(0xFF10B981),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(res.errorMessage ?? 'Failed to create offer.')),
+                                );
+                              }
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3B82F6),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: isCreating
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Text('Create Offer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -92,15 +266,33 @@ class _TeacherCoursesTabState extends State<TeacherCoursesTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 16),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24.0),
-                child: Text(
-                  'My Offers',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Row(
+                  children: [
+                    if (Navigator.of(context).canPop()) ...[
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    const Text(
+                      'My Offers',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 20),
@@ -137,7 +329,7 @@ class _TeacherCoursesTabState extends State<TeacherCoursesTab> {
                       padding: const EdgeInsets.only(
                         left: 24.0,
                         right: 24.0,
-                        bottom: 40.0,
+                        bottom: 120.0,
                       ),
                       itemCount: _filtered.length,
                       itemBuilder: (context, index) =>
@@ -147,6 +339,16 @@ class _TeacherCoursesTabState extends State<TeacherCoursesTab> {
                 ),
             ],
           ),
+        ),
+      ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 100.0),
+        child: FloatingActionButton.extended(
+          onPressed: _showCreateOfferDialog,
+          backgroundColor: const Color(0xFF3B82F6),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text('Create Offer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       ),
     );
@@ -188,7 +390,7 @@ class _TeacherCoursesTabState extends State<TeacherCoursesTab> {
 
   Widget _buildOfferItem(Map<String, dynamic> offer) {
     final title = offer['title']?.toString() ?? 'Untitled';
-    final coinsPerHour = offer['coins_per_hour']?.toString() ?? '—';
+    final coinsPerSession = offer['coins_per_session']?.toString() ?? offer['coins_per_hour']?.toString() ?? '—';
     final durationRaw = offer['duration_minutes'];
     final duration = durationRaw != null ? '${durationRaw}min' : null;
     final offerId = offer['id']?.toString() ?? '';
@@ -244,7 +446,7 @@ class _TeacherCoursesTabState extends State<TeacherCoursesTab> {
                         size: 14, color: Color(0xFF6366F1)),
                     const SizedBox(width: 4),
                     Text(
-                      '$coinsPerHour coins/hr',
+                      '$coinsPerSession coins',
                       style: TextStyle(
                           fontSize: 12, color: Colors.grey.shade500),
                     ),

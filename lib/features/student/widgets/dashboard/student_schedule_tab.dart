@@ -56,7 +56,8 @@ class _StudentScheduleTabState extends State<StudentScheduleTab>
         _past = all
             .where((b) =>
                 b.status == BookingStatus.completed ||
-                b.status == BookingStatus.cancelled)
+                b.status == BookingStatus.cancelled ||
+                b.status == BookingStatus.declined)
             .toList()
           ..sort((a, b) => b.startTime.compareTo(a.startTime));
       } else {
@@ -141,7 +142,8 @@ class _StudentScheduleTabState extends State<StudentScheduleTab>
                           _buildList(
                               _past
                                   .where((b) =>
-                                      b.status == BookingStatus.cancelled)
+                                      b.status == BookingStatus.cancelled ||
+                                      b.status == BookingStatus.declined)
                                   .toList(),
                               'cancelled'),
                         ],

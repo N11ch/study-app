@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
+import '../../../core/services/auth_state.dart';
 import '../../../core/services/booking_api_service.dart';
 import '../../../core/services/coin_service.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/buttons/outline_button.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
+import '../../../routes/app_routes.dart';
 
 class BookingScreen extends StatefulWidget {
   final String tutorId;
@@ -114,6 +117,9 @@ class _BookingScreenState extends State<BookingScreen> {
     final coinsCost = int.tryParse(widget.offer['coins_per_hour']?.toString() ?? '0') ?? 0;
     final duration = int.tryParse(widget.offer['duration_minutes']?.toString() ?? '60') ?? 60;
 
+    final studentCoins = AuthState.instance.coinsBalance;
+    final hasEnoughCoins = studentCoins >= coinsCost;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -148,11 +154,45 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
             ),
             const SizedBox(height: AppSizes.xl),
+            if (!hasEnoughCoins) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.error.withOpacity(0.2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: AppColors.error),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Insufficient coins. You have $studentCoins coins, but this session requires $coinsCost coins.',
+                        style: const TextStyle(
+                          color: AppColors.error,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSizes.md),
+              OutlineButton(
+                text: 'Top Up Coins',
+                onPressed: () => Navigator.of(context).pushNamed(AppRoutes.coinPurchase),
+                borderColor: AppColors.primary,
+                textColor: AppColors.primary,
+              ),
+              const SizedBox(height: AppSizes.lg),
+            ],
             PrimaryButton(
               text: 'Confirm Booking',
-              onPressed: _submit,
+              onPressed: hasEnoughCoins ? _submit : null,
               isLoading: _isSubmitting,
-              backgroundColor: AppColors.primary,
+              backgroundColor: hasEnoughCoins ? AppColors.primary : Colors.grey.shade300,
             ),
             const SizedBox(height: AppSizes.xl),
           ],

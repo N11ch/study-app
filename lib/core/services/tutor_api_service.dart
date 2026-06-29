@@ -146,7 +146,7 @@ class TutorApiService {
     }
     final body = <String, dynamic>{
       'title': title,
-      'coins_per_hour': coinsPerHour,
+      'coins_per_session': coinsPerHour,
       if (summary != null) 'summary': summary,
       if (about != null) 'about': about,
       if (durationMinutes != null) 'duration_minutes': durationMinutes,
@@ -191,7 +191,7 @@ class TutorApiService {
       if (title != null) 'title': title,
       if (summary != null) 'summary': summary,
       if (about != null) 'about': about,
-      if (coinsPerHour != null) 'coins_per_hour': coinsPerHour,
+      if (coinsPerHour != null) 'coins_per_session': coinsPerHour,
       if (durationMinutes != null) 'duration_minutes': durationMinutes,
       if (subjectIds != null) 'subject_ids': subjectIds,
       if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
